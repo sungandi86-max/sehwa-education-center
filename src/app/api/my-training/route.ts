@@ -4,6 +4,7 @@ import { appsScriptClient } from "@/lib/api/appsScriptClient";
 
 export async function POST(request: Request) {
   const body = (await request.json().catch(() => ({}))) as {
+    staffId?: string;
     staffName?: string;
     department?: string;
     year?: number;
@@ -14,6 +15,7 @@ export async function POST(request: Request) {
   }
 
   const result = await appsScriptClient.lookupMyTrainingStatus({
+    staffId: body.staffId,
     staffName: body.staffName,
     department: body.department,
     year: body.year ?? APP_CONFIG.currentYear

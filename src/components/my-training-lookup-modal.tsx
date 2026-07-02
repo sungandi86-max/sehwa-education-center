@@ -2,14 +2,6 @@
 
 import { useState } from "react";
 import { StaffSessionBanner, useStaffSession, type StaffSession } from "@/components/staff-session-provider";
-import type { MyTrainingItemStatus, MyTrainingLookupResult } from "@/lib/my-training-lookup";
-
-const statusClassMap: Record<MyTrainingItemStatus, string> = {
-  이수완료: "bg-emerald-100 text-emerald-800",
-  미이수: "bg-rose-100 text-rose-800",
-  승인대기: "bg-amber-100 text-amber-800",
-  반려: "bg-rose-100 text-rose-800"
-};
 
 export function MyTrainingLookupCard({
   completedCount,
@@ -31,7 +23,9 @@ export function MyTrainingLookupCard({
         <p className="text-sm font-bold text-brand-700">내 이수 확인</p>
         <h3 className="mt-2 text-xl font-bold text-brand-900">내 이수현황</h3>
         <p className="mt-3 text-sm leading-6 text-slate-600">
-          {staff ? `${staff.staffName} 선생님의 2026년 교육 이수 현황을 확인합니다.` : "성명으로 본인 확인 후 2026년 교육 이수 현황을 확인합니다."}
+          {staff
+            ? `${staff.staffName} 선생님의 2026년 교육 이수 현황을 확인합니다.`
+            : "성명으로 본인 확인 후 2026년 교육 이수 현황을 확인합니다."}
         </p>
         <div className="mt-auto w-full border-t border-slateblue-100 pt-4">
           <div className="flex items-center justify-between gap-3">
@@ -54,51 +48,22 @@ export function MyTrainingLookupModal({ onClose }: { onClose: () => void }) {
   const [staffName, setStaffName] = useState("");
   const [department, setDepartment] = useState("");
   const [matches, setMatches] = useState<StaffSession[]>([]);
-  const [result, setResult] = useState<MyTrainingLookupResult | null>(null);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  const loadTrainingResult = async (selectedStaff: StaffSession) => {
-    const response = await fetch("/api/my-training", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        staffName: selectedStaff.staffName,
-        department: selectedStaff.department,
-        year: 2026
-      })
-    });
-
-    const payload = (await response.json()) as MyTrainingLookupResult;
-
-    if (response.ok) {
-      setResult({
-        ...payload,
-        staff: {
-          staffId: selectedStaff.staffId,
-          staffName: selectedStaff.staffName,
-          department: selectedStaff.department
-        }
-      });
-    }
-  };
-
-  const applyStaffSession = async (selectedStaff: StaffSession) => {
+  const applyStaffSession = (selectedStaff: StaffSession) => {
     setStaff(selectedStaff);
-    setStaffName(selectedStaff.staffName);
-    setDepartment(selectedStaff.department);
+    setStaffName("");
+    setDepartment("");
     setMatches([]);
     setError("");
-    await loadTrainingResult(selectedStaff);
+    onClose();
   };
 
   const submitLookup = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError("");
     setMatches([]);
-    setResult(null);
     setIsLoading(true);
 
     try {
@@ -132,7 +97,7 @@ export function MyTrainingLookupModal({ onClose }: { onClose: () => void }) {
       }
 
       if (found.length === 1) {
-        await applyStaffSession(found[0]);
+        applyStaffSession(found[0]);
         return;
       }
 
@@ -145,15 +110,15 @@ export function MyTrainingLookupModal({ onClose }: { onClose: () => void }) {
     }
   };
 
-  const visibleResult = result?.staff ? result : null;
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slateblue-950/45 px-4 py-6">
       <div className="max-h-[88vh] w-full max-w-2xl overflow-y-auto rounded-[28px] border border-slateblue-100 bg-white shadow-xl">
         <div className="border-b border-slateblue-100 px-5 py-4">
           <p className="text-sm font-bold text-brand-700">내 이수 확인</p>
           <h2 className="mt-1 text-xl font-bold text-brand-900">성명으로 교직원 조회</h2>
-          <p className="mt-2 text-sm leading-6 text-slate-600">성명과 소속부서로 본인 확인 후 같은 Staff 정보가 모든 화면에 사용됩니다.</p>
+          <p className="mt-2 text-sm leading-6 text-slate-600">
+            조회된 교직원 정보가 QR 출석, 이수증 제출, 내 이수현황에 동일하게 사용됩니다.
+          </p>
         </div>
 
         <form onSubmit={submitLookup} className="space-y-4 px-5 py-5">
@@ -170,7 +135,7 @@ export function MyTrainingLookupModal({ onClose }: { onClose: () => void }) {
                 }}
                 required
                 className="input-soft mt-2 w-full"
-                placeholder="예: 최민정"
+                placeholder="예: 박숙현"
               />
             </label>
 
@@ -204,6 +169,7 @@ export function MyTrainingLookupModal({ onClose }: { onClose: () => void }) {
                     <span className="ml-2 text-sm text-slate-500">
                       {member.department}
                       {member.position ? ` · ${member.position}` : ""}
+                      {member.staffId ? ` · ${member.staffId}` : ""}
                     </span>
                   </span>
                   <span className="text-sm font-semibold text-brand-900">선택</span>
@@ -221,54 +187,7 @@ export function MyTrainingLookupModal({ onClose }: { onClose: () => void }) {
             </button>
           </div>
         </form>
-
-        {visibleResult ? (
-          <div className="border-t border-slateblue-100 bg-slateblue-50/70 px-5 py-5">
-            <div className="mb-4">
-              <p className="font-bold text-brand-900">
-                {visibleResult.staff?.staffName} 선생님 · {visibleResult.staff?.department}
-              </p>
-              <p className="mt-1 text-sm text-slate-500">교직원 조회 정보가 세션에 저장되었습니다.</p>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-              <SummaryBox label="이수 완료" value={visibleResult.summary.completedCount} />
-              <SummaryBox label="미이수" value={visibleResult.summary.incompleteCount} />
-              <SummaryBox label="승인대기" value={visibleResult.summary.pendingCount} />
-              <SummaryBox label="반려" value={visibleResult.summary.rejectedCount} />
-            </div>
-
-            <div className="mt-4 space-y-3">
-              {visibleResult.items.map((item) => (
-                <div key={item.eventId} className="rounded-2xl border border-slateblue-100 bg-white px-4 py-3">
-                  <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-                    <div>
-                      <p className="font-bold text-brand-900">{item.title}</p>
-                      <p className="mt-1 text-sm text-slate-500">
-                        {item.department}
-                        {item.completedAt ? ` · ${item.completedAt}` : ""}
-                      </p>
-                    </div>
-                    <span className={`w-fit rounded-full px-2.5 py-1 text-xs font-semibold ${statusClassMap[item.status]}`}>
-                      {item.status}
-                    </span>
-                  </div>
-                  {item.rejectReason ? <p className="mt-2 rounded-2xl bg-rose-50 p-2 text-sm text-rose-700">반려 사유: {item.rejectReason}</p> : null}
-                </div>
-              ))}
-            </div>
-          </div>
-        ) : null}
       </div>
-    </div>
-  );
-}
-
-function SummaryBox({ label, value }: { label: string; value: number }) {
-  return (
-    <div className="rounded-2xl border border-slateblue-100 bg-white p-3">
-      <p className="text-xs font-semibold text-slate-500">{label}</p>
-      <p className="mt-1 text-2xl font-bold text-brand-900">{value}</p>
     </div>
   );
 }

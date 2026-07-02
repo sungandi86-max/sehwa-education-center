@@ -1,9 +1,9 @@
 import { APP_CONFIG } from "@/lib/config";
 import { trainingEvents } from "@/lib/mock-data";
 import { mockAppsScriptAdapter, formatDateTime } from "@/lib/api/mockAppsScriptAdapter";
-import type { StaffRow, TrainingEventRow, TrainingMaterialRow } from "@/types/training";
+import type { CertificateUploadRow, CompletionHistoryViewRow, StaffCompletionLookup, StaffRow, TrainingEventRow, TrainingMaterialRow } from "@/types/training";
 import type { SubmitGroupAttendanceResult, SubmitAttendanceResult, SubmitQrAttendanceInput } from "@/lib/api/appsScriptAdapter";
-import type { MyTrainingLookupResult } from "@/lib/my-training-lookup";
+import type { MyTrainingLookupItem, MyTrainingLookupResult } from "@/lib/my-training-lookup";
 
 const APPS_SCRIPT_API_URL = process.env.NEXT_PUBLIC_APPS_SCRIPT_API_URL?.trim();
 
@@ -278,21 +278,46 @@ export const appsScriptClient = {
     return rows.map(normalizeStaff);
   },
 
-  async lookupMyTrainingStatus(input: { staffName: string; department?: string; year: number }): Promise<MyTrainingLookupResult> {
+  async lookupMyTrainingStatus(input: { staffId?: string; staffName: string; department?: string; year: number }): Promise<MyTrainingLookupResult> {
     if (!APPS_SCRIPT_API_URL) {
       return mockAppsScriptAdapter.lookupMyTrainingStatus(input);
     }
 
-    return postAppsScript<MyTrainingLookupResult>({
-      action: "lookupMyTrainingStatus",
-      staffName: input.staffName,
-      department: input.department,
-      year: String(input.year)
-    });
+    try {
+      return await postAppsScript<MyTrainingLookupResult>({
+        action: "lookupMyTrainingStatus",
+        staffId: input.staffId,
+        staffName: input.staffName,
+        department: input.department,
+        year: String(input.year)
+      });
+    } catch {
+      return composeLiveMyTrainingStatus(input);
+    }
   },
 
   getTrainingDetail: mockAppsScriptAdapter.getTrainingDetail.bind(mockAppsScriptAdapter),
-  getMyTrainingHistory: mockAppsScriptAdapter.getMyTrainingHistory.bind(mockAppsScriptAdapter),
+  async getMyTrainingHistory(query: string, year: number): Promise<StaffCompletionLookup> {
+    if (!APPS_SCRIPT_API_URL) {
+      return mockAppsScriptAdapter.getMyTrainingHistory(query, year);
+    }
+
+    const data = await postAppsScript<CompletionHistoryViewRow[] | StaffCompletionLookup>({
+      action: "getMyTrainingHistory",
+      staffId: query,
+      query,
+      year: String(year)
+    });
+
+    if (Array.isArray(data)) {
+      return {
+        completions: data,
+        uploads: []
+      };
+    }
+
+    return data;
+  },
   async submitQrAttendance(input: SubmitQrAttendanceInput): Promise<SubmitAttendanceResult | SubmitGroupAttendanceResult> {
     if (!APPS_SCRIPT_API_URL) {
       return mockAppsScriptAdapter.submitQrAttendance(input);
@@ -332,11 +357,200 @@ export const appsScriptClient = {
     }) as Promise<SubmitGroupAttendanceResult>;
   },
   uploadCertificate: mockAppsScriptAdapter.uploadCertificate.bind(mockAppsScriptAdapter),
-  getMyUploads: mockAppsScriptAdapter.getMyUploads.bind(mockAppsScriptAdapter),
+  async getMyUploads(query: string, year?: number): Promise<CertificateUploadRow[]> {
+    if (!APPS_SCRIPT_API_URL) {
+      return mockAppsScriptAdapter.getMyUploads(query, year);
+    }
+
+    return postAppsScript<CertificateUploadRow[]>({
+      action: "getMyUploads",
+      staffId: query,
+      query,
+      year: year ? String(year) : undefined
+    });
+  },
   getUploadStatus: mockAppsScriptAdapter.getUploadStatus.bind(mockAppsScriptAdapter)
 };
 
 export { formatDateTime };
+
+async function composeLiveMyTrainingStatus(input: {
+  staffId?: string;
+  staffName: string;
+  department?: string;
+  year: number;
+}): Promise<MyTrainingLookupResult> {
+  let staffId = input.staffId?.trim() ?? "";
+  let staffName = input.staffName;
+  let department = input.department ?? "";
+
+  if (!staffId) {
+    const staffRows = await appsScriptClient.findStaff({
+      name: input.staffName,
+      department: input.department
+    });
+    const selectedStaff = staffRows[0] as unknown as RawRecord | undefined;
+
+    staffId = getRecordString(selectedStaff, ["교직원ID", "staffId"]);
+    staffName = getRecordString(selectedStaff, ["성명", "staffName"], input.staffName);
+    department = getRecordString(selectedStaff, ["소속부서", "department"], input.department ?? "");
+  }
+
+  if (!staffId) {
+    return {
+      staff: {
+        staffId: "",
+        staffName,
+        department
+      },
+      summary: {
+        completedCount: 0,
+        incompleteCount: 0,
+        pendingCount: 0,
+        rejectedCount: 0
+      },
+      items: []
+    };
+  }
+
+  const [events, history, uploads] = await Promise.all([
+    appsScriptClient.getTrainings(),
+    appsScriptClient.getMyTrainingHistory(staffId, input.year).catch(() => ({ completions: [], uploads: [] })),
+    appsScriptClient.getMyUploads(staffId, input.year).catch(() => [])
+  ]);
+
+  const completionRows = Array.isArray(history.completions) ? history.completions : [];
+  const uploadRows = [...(Array.isArray(history.uploads) ? history.uploads : []), ...uploads];
+  const uniqueUploads = Array.from(
+    new Map(
+      uploadRows.map((upload) => {
+        const uploadRecord = upload as unknown as RawRecord;
+
+        return [getRecordString(uploadRecord, ["uploadId", "업로드ID"]) || `${getEventId(upload)}-${getUploadDate(upload)}`, upload];
+      })
+    ).values()
+  );
+  const targetEvents = events.filter((event) => event.연도 === input.year);
+
+  const items = targetEvents.map((event) => {
+    const completion = completionRows.find((row) => getEventId(row) === event.eventId && isCompleted(row));
+    const upload = uniqueUploads.find((row) => getEventId(row) === event.eventId);
+    const uploadStatus = getRecordString(upload as RawRecord | undefined, ["상태", "status"]);
+    const approvedUpload = isApproved(uploadStatus) ? upload : undefined;
+    const rejectedUpload = isRejected(uploadStatus) ? upload : undefined;
+    const pendingUpload = upload && !approvedUpload && !rejectedUpload ? upload : undefined;
+    const status = getLookupItemStatus(Boolean(completion), Boolean(approvedUpload), Boolean(pendingUpload), Boolean(rejectedUpload));
+
+    return {
+      eventId: event.eventId,
+      title: event.제목,
+      department: event.담당부서,
+      status,
+      completedAt: formatDisplayDate(getRecordString(completion as RawRecord | undefined, ["이수일시", "completedAt"]) || getRecordString(approvedUpload as RawRecord | undefined, ["검토일시", "completedAt", "업로드일시"])),
+      completionSource: getRecordString(completion as RawRecord | undefined, ["이수경로", "completionSource"]) || (approvedUpload ? "이수증 제출" : undefined),
+      uploadStatus: uploadStatus || undefined,
+      uploadFileName: getRecordString(upload as RawRecord | undefined, ["파일명", "fileName"]) || undefined,
+      rejectReason: getRecordString(rejectedUpload as RawRecord | undefined, ["반려사유", "rejectReason"]) || undefined
+    };
+  });
+
+  return {
+    staff: {
+      staffId,
+      staffName,
+      department
+    },
+    summary: {
+      completedCount: items.filter((item) => normalizeStatusText(item.status).includes("이수완료")).length,
+      incompleteCount: items.filter((item) => normalizeStatusText(item.status).includes("미이수")).length,
+      pendingCount: items.filter((item) => {
+        const status = normalizeStatusText(item.status);
+        return status.includes("승인대기") || status.includes("제출완료");
+      }).length,
+      rejectedCount: items.filter((item) => normalizeStatusText(item.status).includes("반려")).length
+    },
+    items
+  };
+}
+
+function getLookupItemStatus(
+  hasCompletion: boolean,
+  hasApprovedUpload: boolean,
+  hasPendingUpload: boolean,
+  hasRejectedUpload: boolean
+): MyTrainingLookupItem["status"] {
+  if (hasCompletion || hasApprovedUpload) {
+    return "이수완료" as MyTrainingLookupItem["status"];
+  }
+
+  if (hasRejectedUpload) {
+    return "반려" as MyTrainingLookupItem["status"];
+  }
+
+  if (hasPendingUpload) {
+    return "제출완료" as MyTrainingLookupItem["status"];
+  }
+
+  return "미이수" as MyTrainingLookupItem["status"];
+}
+
+function getEventId(row: unknown) {
+  return getRecordString(row as RawRecord | undefined, ["eventId", "교육ID"]);
+}
+
+function isCompleted(row: unknown) {
+  const record = row as RawRecord | undefined;
+  const value = getRecordString(record, ["이수완료", "completed"]);
+
+  return value === "true" || value === "TRUE" || value === "1" || value === "완료" || value === "이수완료";
+}
+
+function isApproved(status: string) {
+  return status.includes("승인") || status.includes("이수완료");
+}
+
+function isRejected(status: string) {
+  return status.includes("반려");
+}
+
+function getUploadDate(row: unknown) {
+  return getRecordString(row as RawRecord | undefined, ["업로드일시", "uploadedAt"]);
+}
+
+function getRecordString(record: RawRecord | undefined, keys: string[], fallback = "") {
+  if (!record) {
+    return fallback;
+  }
+
+  for (const key of keys) {
+    const value = record[key];
+
+    if (value != null && String(value).trim()) {
+      return String(value);
+    }
+  }
+
+  return fallback;
+}
+
+function formatDisplayDate(value?: string) {
+  if (!value) {
+    return undefined;
+  }
+
+  const parsedValue = value.includes("T") ? value : value.replace(" ", "T");
+  const date = new Date(parsedValue);
+
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+
+  return formatDateTime(date.toISOString());
+}
+
+function normalizeStatusText(status: unknown) {
+  return status == null ? "" : String(status).replace(/\s/g, "");
+}
 
 async function submitGroupQrAttendanceToAppsScript(input: SubmitQrAttendanceInput): Promise<SubmitGroupAttendanceResult> {
   const result = await postAppsScriptEnvelope<RawRecord>({
