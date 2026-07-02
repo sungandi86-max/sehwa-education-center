@@ -13,6 +13,8 @@ export type AppsScriptAction =
   | "getAppConfig"
   | "getTrainings"
   | "getTrainingDetail"
+  | "getMaterials"
+  | "getMaterialsByEvent"
   | "getTrainingMaterials"
   | "getGroupTrainings"
   | "findStaff"
@@ -39,14 +41,16 @@ export type AppsScriptRequest =
   | { action: "getAppConfig" }
   | { action: "getTrainings"; year: string }
   | { action: "getTrainingDetail"; eventId: string }
+  | { action: "getMaterials"; eventId?: string }
+  | { action: "getMaterialsByEvent"; eventId?: string }
   | { action: "getTrainingMaterials"; eventId?: string }
   | { action: "getGroupTrainings"; groupId: string }
-  | { action: "findStaff"; query: string }
-  | { action: "lookupMyTrainingStatus"; staffName: string; department?: string; year: string }
-  | { action: "getMyTrainingHistory"; query: string; year: string }
+  | { action: "findStaff"; name: string; department?: string }
+  | { action: "lookupMyTrainingStatus"; staffId?: string; staffName: string; department?: string; year: string }
+  | { action: "getMyTrainingHistory"; staffId: string; query?: string; year: string }
   | ({ action: "submitQrAttendance" } & SubmitQrAttendanceInput)
   | ({ action: "uploadCertificate" } & UploadCertificateInput)
-  | { action: "getMyUploads"; query: string; year?: string }
+  | { action: "getMyUploads"; staffId: string; query?: string; year?: string }
   | { action: "getUploadStatus"; uploadId: string };
 
 export interface SubmitAttendanceResult {
@@ -137,15 +141,15 @@ export function createAppsScriptHttpAdapter(apiUrl = process.env.NEXT_PUBLIC_APP
     getAppConfig: () => post({ action: "getAppConfig" }),
     getTrainings: (year) => post({ action: "getTrainings", year: String(year) }),
     getTrainingDetail: (eventId) => post({ action: "getTrainingDetail", eventId }),
-    getTrainingMaterials: (eventId) => post({ action: "getTrainingMaterials", eventId }),
+    getTrainingMaterials: (eventId) => post({ action: "getMaterialsByEvent", eventId }),
     getGroupTrainings: (groupId) => post({ action: "getGroupTrainings", groupId }),
-    findStaff: (query) => post({ action: "findStaff", query }),
+    findStaff: (query) => post({ action: "findStaff", name: query }),
     lookupMyTrainingStatus: (input) =>
       post({ action: "lookupMyTrainingStatus", staffName: input.staffName, department: input.department, year: String(input.year) }),
-    getMyTrainingHistory: (query, year) => post({ action: "getMyTrainingHistory", query, year: String(year) }),
+    getMyTrainingHistory: (query, year) => post({ action: "getMyTrainingHistory", staffId: query, query, year: String(year) }),
     submitQrAttendance: (input) => post({ action: "submitQrAttendance", ...input }),
     uploadCertificate: (input) => post({ action: "uploadCertificate", ...input }),
-    getMyUploads: (query, year) => post({ action: "getMyUploads", query, year: year ? String(year) : undefined }),
+    getMyUploads: (query, year) => post({ action: "getMyUploads", staffId: query, query, year: year ? String(year) : undefined }),
     getUploadStatus: (uploadId) => post({ action: "getUploadStatus", uploadId })
   };
 }

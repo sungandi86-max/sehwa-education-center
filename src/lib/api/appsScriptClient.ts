@@ -1,7 +1,15 @@
 import { APP_CONFIG } from "@/lib/config";
 import { trainingEvents } from "@/lib/mock-data";
 import { mockAppsScriptAdapter, formatDateTime } from "@/lib/api/mockAppsScriptAdapter";
-import type { CertificateUploadRow, CompletionHistoryViewRow, StaffCompletionLookup, StaffRow, TrainingEventRow, TrainingMaterialRow } from "@/types/training";
+import type {
+  CertificateUploadRow,
+  CompletionHistoryViewRow,
+  StaffCompletionLookup,
+  StaffRow,
+  TrainingDetail,
+  TrainingEventRow,
+  TrainingMaterialRow
+} from "@/types/training";
 import type {
   SubmitGroupAttendanceResult,
   SubmitAttendanceResult,
@@ -247,7 +255,9 @@ export const appsScriptClient = {
       return mockAppsScriptAdapter.getTrainingMaterials();
     }
 
-    const rows = await postAppsScript<RawRecord[]>({ action: "getMaterials" });
+    const rows = await postAppsScript<RawRecord[]>({ action: "getMaterialsByEvent" }).catch(() =>
+      postAppsScript<RawRecord[]>({ action: "getMaterials" })
+    );
 
     return rows.map(normalizeMaterial);
   },
@@ -321,7 +331,36 @@ export const appsScriptClient = {
     }
   },
 
-  getTrainingDetail: mockAppsScriptAdapter.getTrainingDetail.bind(mockAppsScriptAdapter),
+  async getTrainingDetail(eventId: string): Promise<TrainingDetail | undefined> {
+    if (!APPS_SCRIPT_API_URL) {
+      return mockAppsScriptAdapter.getTrainingDetail(eventId);
+    }
+
+    try {
+      const detail = await postAppsScript<RawRecord>({
+        action: "getTrainingDetail",
+        eventId
+      });
+
+      return normalizeTrainingDetail(detail);
+    } catch {
+      const [events, materials] = await Promise.all([appsScriptClient.getTrainings(), appsScriptClient.getMaterials().catch(() => [])]);
+      const event = events.find((item) => item.eventId === eventId);
+
+      if (!event) {
+        return undefined;
+      }
+
+      return {
+        event,
+        targets: [],
+        attendances: [],
+        materials: materials.filter((material) => material.eventId === eventId),
+        uploads: [],
+        completions: []
+      };
+    }
+  },
   async getMyTrainingHistory(query: string, year: number): Promise<StaffCompletionLookup> {
     if (!APPS_SCRIPT_API_URL) {
       return mockAppsScriptAdapter.getMyTrainingHistory(query, year);
@@ -563,6 +602,26 @@ function getLookupItemStatus(
   return "미이수" as MyTrainingLookupItem["status"];
 }
 
+function normalizeTrainingDetail(detail: RawRecord): TrainingDetail | undefined {
+  const eventRecord = (detail.event ?? detail) as RawRecord;
+  const eventId = getRecordString(eventRecord, ["eventId"]);
+
+  if (!eventId) {
+    return undefined;
+  }
+
+  const materialRows = Array.isArray(detail.materials) ? (detail.materials as RawRecord[]) : [];
+
+  return {
+    event: normalizeTraining(eventRecord),
+    targets: Array.isArray(detail.targets) ? (detail.targets as TrainingDetail["targets"]) : [],
+    attendances: Array.isArray(detail.attendances) ? (detail.attendances as TrainingDetail["attendances"]) : [],
+    materials: materialRows.map(normalizeMaterial),
+    uploads: Array.isArray(detail.uploads) ? (detail.uploads as TrainingDetail["uploads"]) : [],
+    completions: Array.isArray(detail.completions) ? (detail.completions as TrainingDetail["completions"]) : []
+  };
+}
+
 function getEventId(row: unknown) {
   return getRecordString(row as RawRecord | undefined, ["eventId", "교육ID"]);
 }
@@ -622,6 +681,8 @@ function normalizeStatusText(status: unknown) {
 }
 
 async function submitGroupQrAttendanceToAppsScript(input: SubmitQrAttendanceInput): Promise<SubmitGroupAttendanceResult> {
+  // Duplicate attendance is defined by the stable staffId + eventId pair.
+  // Group attendance reuses one signature and lets Apps Script complete or skip each event independently.
   const result = await postAppsScriptEnvelope<RawRecord>({
     ...createQrAttendancePayload(input),
     mode: "group"

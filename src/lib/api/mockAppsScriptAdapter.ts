@@ -65,12 +65,14 @@ export const mockAppsScriptAdapter: AppsScriptAdapter = {
         return this.getTrainings(Number(payload.year)) as Promise<T>;
       case "getTrainingDetail":
         return this.getTrainingDetail(payload.eventId) as Promise<T>;
+      case "getMaterials":
+      case "getMaterialsByEvent":
       case "getTrainingMaterials":
         return this.getTrainingMaterials(payload.eventId) as Promise<T>;
       case "getGroupTrainings":
         return this.getGroupTrainings(payload.groupId) as Promise<T>;
       case "findStaff":
-        return this.findStaff(payload.query) as Promise<T>;
+        return this.findStaff(payload.name) as Promise<T>;
       case "lookupMyTrainingStatus":
         return this.lookupMyTrainingStatus({
           staffName: payload.staffName,
@@ -78,7 +80,7 @@ export const mockAppsScriptAdapter: AppsScriptAdapter = {
           year: Number(payload.year)
         }) as Promise<T>;
       case "getMyTrainingHistory":
-        return this.getMyTrainingHistory(payload.query, Number(payload.year)) as Promise<T>;
+        return this.getMyTrainingHistory(payload.staffId || payload.query || "", Number(payload.year)) as Promise<T>;
       case "submitQrAttendance":
         return this.submitQrAttendance({
           mode: payload.mode,
@@ -91,9 +93,11 @@ export const mockAppsScriptAdapter: AppsScriptAdapter = {
       case "uploadCertificate":
         return this.uploadCertificate(payload) as Promise<T>;
       case "getMyUploads":
-        return this.getMyUploads(payload.query, payload.year ? Number(payload.year) : undefined) as Promise<T>;
+        return this.getMyUploads(payload.staffId || payload.query || "", payload.year ? Number(payload.year) : undefined) as Promise<T>;
       case "getUploadStatus":
         return this.getUploadStatus(payload.uploadId) as Promise<T>;
+      default:
+        throw new Error(`Unsupported mock Apps Script action: ${(payload as { action?: string }).action ?? "unknown"}`);
     }
   },
 
