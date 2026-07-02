@@ -10,6 +10,8 @@ export interface MyTrainingLookupItem {
   status: MyTrainingItemStatus;
   completedAt?: string;
   completionSource?: string;
+  uploadStatus?: string;
+  uploadFileName?: string;
   rejectReason?: string;
 }
 
@@ -122,6 +124,8 @@ export function lookupMyTrainingStatus({
       status,
       completedAt: formatLookupDateTime(completedAt),
       completionSource: attendance?.참석방법 ?? (approvedUpload ? "이수증업로드" : undefined),
+      uploadStatus: upload?.상태,
+      uploadFileName: upload?.파일명,
       rejectReason: rejectedUpload?.반려사유
     };
   });

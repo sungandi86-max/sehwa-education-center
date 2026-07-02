@@ -11,6 +11,7 @@ export type {
   MaterialType,
   StaffCompletionLookup,
   StaffRow,
+  TrainingAttendanceRow,
   TrainingDetail,
   TrainingEventRow,
   TrainingMaterialRow,

@@ -83,6 +83,7 @@ export interface TrainingMaterialRow {
 
 export interface CourseBundleMappingRow {
   mappingId: string;
+  groupId: string;
   bundleId: string;
   bundleName: string;
   eventId: string;

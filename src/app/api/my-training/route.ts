@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { APP_CONFIG } from "@/lib/config";
-import { lookupMyTrainingStatus } from "@/lib/my-training-lookup";
+import { appsScriptClient } from "@/lib/api/appsScriptClient";
 
 export async function POST(request: Request) {
   const body = (await request.json().catch(() => ({}))) as {
@@ -13,7 +13,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "성명을 입력해주세요." }, { status: 400 });
   }
 
-  const result = lookupMyTrainingStatus({
+  const result = await appsScriptClient.lookupMyTrainingStatus({
     staffName: body.staffName,
     department: body.department,
     year: body.year ?? APP_CONFIG.currentYear

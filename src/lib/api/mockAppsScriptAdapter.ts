@@ -1,6 +1,7 @@
 import { APP_CONFIG } from "@/lib/config";
 import {
   certificateUploads,
+  courseBundleMappings,
   staff,
   trainingAttendances,
   trainingEvents,
@@ -13,7 +14,7 @@ import type {
   SubmitAttendanceResult,
   UploadCertificateResult
 } from "./appsScriptAdapter";
-import type { CertificateUploadRow, CompletionHistoryViewRow } from "@/types/training";
+import type { CertificateUploadRow, CompletionHistoryViewRow, TrainingAttendanceRow } from "@/types/training";
 import { lookupMyTrainingStatus } from "@/lib/my-training-lookup";
 
 export const formatDateTime = (value?: string) =>
@@ -25,9 +26,11 @@ export const formatDateTime = (value?: string) =>
       }).format(new Date(value))
     : undefined;
 
+const mockAttendances: TrainingAttendanceRow[] = [...trainingAttendances];
+
 const createCompletionHistory = (): CompletionHistoryViewRow[] => {
   return trainingTargets.map((target) => {
-    const attendance = trainingAttendances.find(
+    const attendance = mockAttendances.find(
       (row) => row.eventId === target.eventId && row.교직원ID === target.교직원ID
     );
     const approvedUpload = certificateUploads.find(
@@ -48,7 +51,7 @@ const createCompletionHistory = (): CompletionHistoryViewRow[] => {
   });
 };
 
-const completionHistory = createCompletionHistory();
+const getCompletionHistory = () => createCompletionHistory();
 
 export const getTrainingTitle = (eventId: string) =>
   trainingEvents.find((event) => event.eventId === eventId)?.제목 ?? eventId;
@@ -64,6 +67,8 @@ export const mockAppsScriptAdapter: AppsScriptAdapter = {
         return this.getTrainingDetail(payload.eventId) as Promise<T>;
       case "getTrainingMaterials":
         return this.getTrainingMaterials(payload.eventId) as Promise<T>;
+      case "getGroupTrainings":
+        return this.getGroupTrainings(payload.groupId) as Promise<T>;
       case "findStaff":
         return this.findStaff(payload.query) as Promise<T>;
       case "lookupMyTrainingStatus":
@@ -76,6 +81,13 @@ export const mockAppsScriptAdapter: AppsScriptAdapter = {
         return this.getMyTrainingHistory(payload.query, Number(payload.year)) as Promise<T>;
       case "submitQrAttendance":
         return this.submitQrAttendance(payload.eventId, payload.staffId) as Promise<T>;
+      case "submitGroupQrAttendance":
+        return this.submitGroupQrAttendance({
+          groupId: payload.groupId,
+          eventIds: payload.eventIds,
+          staffId: payload.staffId,
+          signature: payload.signature
+        }) as Promise<T>;
       case "uploadCertificate":
         return this.uploadCertificate(payload) as Promise<T>;
       case "getMyUploads":
@@ -103,15 +115,25 @@ export const mockAppsScriptAdapter: AppsScriptAdapter = {
     return {
       event,
       targets: trainingTargets.filter((item) => item.eventId === eventId),
-      attendances: trainingAttendances.filter((item) => item.eventId === eventId),
+      attendances: mockAttendances.filter((item) => item.eventId === eventId),
       materials: trainingMaterials.filter((item) => item.eventId === eventId),
       uploads: certificateUploads.filter((item) => item.eventId === eventId),
-      completions: completionHistory.filter((item) => item.eventId === eventId)
+      completions: getCompletionHistory().filter((item) => item.eventId === eventId)
     };
   },
 
   async getTrainingMaterials(eventId) {
     return eventId ? trainingMaterials.filter((material) => material.eventId === eventId) : trainingMaterials;
+  },
+
+  async getGroupTrainings(groupId) {
+    const mappings = courseBundleMappings
+      .filter((mapping) => mapping.groupId === groupId || mapping.bundleId === groupId)
+      .sort((a, b) => a.sortOrder - b.sortOrder);
+
+    return mappings
+      .map((mapping) => trainingEvents.find((event) => event.eventId === mapping.eventId))
+      .filter((event): event is NonNullable<typeof event> => Boolean(event));
   },
 
   async findStaff(query) {
@@ -138,7 +160,7 @@ export const mockAppsScriptAdapter: AppsScriptAdapter = {
 
     return {
       staff: matchedStaff,
-      completions: completionHistory.filter(
+      completions: getCompletionHistory().filter(
         (row) => row.교직원ID === matchedStaff.교직원ID && eventIds.includes(row.eventId)
       ),
       uploads: certificateUploads.filter(
@@ -154,14 +176,59 @@ export const mockAppsScriptAdapter: AppsScriptAdapter = {
     if (!event || !member) {
       return {
         ok: false,
+        eventId,
         message: "교육 또는 교직원 정보를 확인할 수 없습니다."
       };
     }
 
+    const duplicated = mockAttendances.find((row) => row.eventId === eventId && row.교직원ID === staffId);
+
+    if (duplicated) {
+      return {
+        ok: true,
+        eventId,
+        attendanceId: duplicated.attendanceId,
+        status: "already",
+        message: "이미 출석 처리된 교육입니다."
+      };
+    }
+
+    const attendanceId = `MOCK-ATT-${eventId}-${staffId}-${Date.now()}`;
+    mockAttendances.push({
+      attendanceId,
+      eventId,
+      교직원ID: member.교직원ID,
+      성명: member.성명,
+      소속부서: member.소속부서,
+      참석일시: new Date().toISOString(),
+      참석방법: "QR"
+    });
+
     return {
       ok: true,
-      attendanceId: `MOCK-ATT-${eventId}-${staffId}`,
+      eventId,
+      attendanceId,
+      status: "completed",
       message: "QR 출석이 확인되었습니다. 담당자가 확인할 수 있도록 출석 기록에 반영됩니다."
+    };
+  },
+
+  async submitGroupQrAttendance(input) {
+    const results = [];
+
+    for (const eventId of input.eventIds) {
+      results.push(await this.submitQrAttendance(eventId, input.staffId));
+    }
+
+    const completedCount = results.filter((result) => result.ok && result.status === "completed").length;
+    const skippedCount = results.filter((result) => result.ok && result.status === "already").length;
+
+    return {
+      ok: results.every((result) => result.ok),
+      completedCount,
+      skippedCount,
+      results,
+      message: `출석 완료 ${completedCount}건, 이미 출석 처리 ${skippedCount}건`
     };
   },
 

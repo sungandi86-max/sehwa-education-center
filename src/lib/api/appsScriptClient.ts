@@ -2,6 +2,8 @@ import { APP_CONFIG } from "@/lib/config";
 import { trainingEvents } from "@/lib/mock-data";
 import { mockAppsScriptAdapter, formatDateTime } from "@/lib/api/mockAppsScriptAdapter";
 import type { StaffRow, TrainingEventRow, TrainingMaterialRow } from "@/types/training";
+import type { SubmitGroupAttendanceResult, SubmitAttendanceResult } from "@/lib/api/appsScriptAdapter";
+import type { MyTrainingLookupResult } from "@/lib/my-training-lookup";
 
 const APPS_SCRIPT_API_URL = process.env.NEXT_PUBLIC_APPS_SCRIPT_API_URL?.trim();
 
@@ -203,6 +205,20 @@ export const appsScriptClient = {
     return rows.map(normalizeMaterial);
   },
 
+  async getGroupTrainings(groupId: string): Promise<TrainingEventRow[]> {
+    if (!APPS_SCRIPT_API_URL) {
+      return mockAppsScriptAdapter.getGroupTrainings(groupId);
+    }
+
+    try {
+      const rows = await postAppsScript<RawRecord[]>({ action: "getGroupTrainings", groupId });
+
+      return rows.map(normalizeTraining);
+    } catch {
+      return mockAppsScriptAdapter.getGroupTrainings(groupId);
+    }
+  },
+
   async findStaff({ name, department }: { name: string; department?: string }): Promise<StaffRow[]> {
     if (!APPS_SCRIPT_API_URL) {
       const member = await mockAppsScriptAdapter.findStaff(name);
@@ -235,9 +251,62 @@ export const appsScriptClient = {
     return rows.map(normalizeStaff);
   },
 
+  async lookupMyTrainingStatus(input: { staffName: string; department?: string; year: number }): Promise<MyTrainingLookupResult> {
+    if (!APPS_SCRIPT_API_URL) {
+      return mockAppsScriptAdapter.lookupMyTrainingStatus(input);
+    }
+
+    return postAppsScript<MyTrainingLookupResult>({
+      action: "lookupMyTrainingStatus",
+      staffName: input.staffName,
+      department: input.department,
+      year: String(input.year)
+    });
+  },
+
   getTrainingDetail: mockAppsScriptAdapter.getTrainingDetail.bind(mockAppsScriptAdapter),
   getMyTrainingHistory: mockAppsScriptAdapter.getMyTrainingHistory.bind(mockAppsScriptAdapter),
-  submitQrAttendance: mockAppsScriptAdapter.submitQrAttendance.bind(mockAppsScriptAdapter),
+  async submitQrAttendance(eventId: string, staffId: string, signature?: string): Promise<SubmitAttendanceResult> {
+    if (!APPS_SCRIPT_API_URL) {
+      return mockAppsScriptAdapter.submitQrAttendance(eventId, staffId);
+    }
+
+    return postAppsScript<SubmitAttendanceResult>({
+      action: "submitQrAttendance",
+      eventId,
+      staffId,
+      signature
+    });
+  },
+  async submitGroupQrAttendance(input: { groupId: string; eventIds: string[]; staffId: string; signature?: string }): Promise<SubmitGroupAttendanceResult> {
+    if (!APPS_SCRIPT_API_URL) {
+      return mockAppsScriptAdapter.submitGroupQrAttendance(input);
+    }
+
+    try {
+      return await postAppsScript<SubmitGroupAttendanceResult>({
+        action: "submitGroupQrAttendance",
+        ...input
+      });
+    } catch {
+      const results = [];
+
+      for (const eventId of input.eventIds) {
+        results.push(await appsScriptClient.submitQrAttendance(eventId, input.staffId, input.signature));
+      }
+
+      const completedCount = results.filter((result) => result.ok && result.status !== "already").length;
+      const skippedCount = results.filter((result) => result.ok && result.status === "already").length;
+
+      return {
+        ok: results.every((result) => result.ok),
+        completedCount,
+        skippedCount,
+        results,
+        message: `출석 완료 ${completedCount}건, 이미 출석 처리 ${skippedCount}건`
+      };
+    }
+  },
   uploadCertificate: mockAppsScriptAdapter.uploadCertificate.bind(mockAppsScriptAdapter),
   getMyUploads: mockAppsScriptAdapter.getMyUploads.bind(mockAppsScriptAdapter),
   getUploadStatus: mockAppsScriptAdapter.getUploadStatus.bind(mockAppsScriptAdapter)

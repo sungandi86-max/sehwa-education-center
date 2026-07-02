@@ -14,10 +14,12 @@ export type AppsScriptAction =
   | "getTrainings"
   | "getTrainingDetail"
   | "getTrainingMaterials"
+  | "getGroupTrainings"
   | "findStaff"
   | "lookupMyTrainingStatus"
   | "getMyTrainingHistory"
   | "submitQrAttendance"
+  | "submitGroupQrAttendance"
   | "uploadCertificate"
   | "getMyUploads"
   | "getUploadStatus";
@@ -27,10 +29,12 @@ export type AppsScriptRequest =
   | { action: "getTrainings"; year: string }
   | { action: "getTrainingDetail"; eventId: string }
   | { action: "getTrainingMaterials"; eventId?: string }
+  | { action: "getGroupTrainings"; groupId: string }
   | { action: "findStaff"; query: string }
   | { action: "lookupMyTrainingStatus"; staffName: string; department?: string; year: string }
   | { action: "getMyTrainingHistory"; query: string; year: string }
   | { action: "submitQrAttendance"; eventId: string; staffId: string }
+  | { action: "submitGroupQrAttendance"; groupId: string; eventIds: string[]; staffId: string; signature?: string }
   | { action: "uploadCertificate"; eventId: string; staffId: string; fileName: string; fileBase64: string }
   | { action: "getMyUploads"; query: string; year?: string }
   | { action: "getUploadStatus"; uploadId: string };
@@ -39,6 +43,16 @@ export interface SubmitAttendanceResult {
   ok: boolean;
   attendanceId?: string;
   message: string;
+  status?: "completed" | "already";
+  eventId?: string;
+}
+
+export interface SubmitGroupAttendanceResult {
+  ok: boolean;
+  message: string;
+  completedCount: number;
+  skippedCount: number;
+  results: SubmitAttendanceResult[];
 }
 
 export interface UploadCertificateResult {
@@ -55,10 +69,12 @@ export interface AppsScriptAdapter {
   getTrainings(year: number): Promise<TrainingEventRow[]>;
   getTrainingDetail(eventId: string): Promise<TrainingDetail | undefined>;
   getTrainingMaterials(eventId?: string): Promise<TrainingMaterialRow[]>;
+  getGroupTrainings(groupId: string): Promise<TrainingEventRow[]>;
   findStaff(query: string): Promise<StaffRow | undefined>;
   lookupMyTrainingStatus(input: { staffName: string; department?: string; year: number }): Promise<MyTrainingLookupResult>;
   getMyTrainingHistory(query: string, year: number): Promise<StaffCompletionLookup>;
   submitQrAttendance(eventId: string, staffId: string): Promise<SubmitAttendanceResult>;
+  submitGroupQrAttendance(input: { groupId: string; eventIds: string[]; staffId: string; signature?: string }): Promise<SubmitGroupAttendanceResult>;
   uploadCertificate(input: {
     eventId: string;
     staffId: string;
@@ -97,11 +113,13 @@ export function createAppsScriptHttpAdapter(apiUrl = process.env.NEXT_PUBLIC_APP
     getTrainings: (year) => post({ action: "getTrainings", year: String(year) }),
     getTrainingDetail: (eventId) => post({ action: "getTrainingDetail", eventId }),
     getTrainingMaterials: (eventId) => post({ action: "getTrainingMaterials", eventId }),
+    getGroupTrainings: (groupId) => post({ action: "getGroupTrainings", groupId }),
     findStaff: (query) => post({ action: "findStaff", query }),
     lookupMyTrainingStatus: (input) =>
       post({ action: "lookupMyTrainingStatus", staffName: input.staffName, department: input.department, year: String(input.year) }),
     getMyTrainingHistory: (query, year) => post({ action: "getMyTrainingHistory", query, year: String(year) }),
     submitQrAttendance: (eventId, staffId) => post({ action: "submitQrAttendance", eventId, staffId }),
+    submitGroupQrAttendance: (input) => post({ action: "submitGroupQrAttendance", ...input }),
     uploadCertificate: (input) => post({ action: "uploadCertificate", ...input }),
     getMyUploads: (query, year) => post({ action: "getMyUploads", query, year: year ? String(year) : undefined }),
     getUploadStatus: (uploadId) => post({ action: "getUploadStatus", uploadId })

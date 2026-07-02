@@ -1,6 +1,7 @@
 import { APP_CONFIG } from "./config";
 import type {
   CertificateUploadRow,
+  CourseBundleMappingRow,
   DepartmentRow,
   ReportRow,
   StaffRow,
@@ -233,6 +234,33 @@ export const trainingMaterials: TrainingMaterialRow[] = [
     자료유형: "외부링크",
     자료URL: "https://training.example.edu/safety",
     공개여부: true
+  }
+];
+
+export const courseBundleMappings: CourseBundleMappingRow[] = [
+  {
+    mappingId: "MAP-2026-001-01",
+    groupId: "GRP-2026-001",
+    bundleId: "GRP-2026-001",
+    bundleName: "7월 교직원 필수연수 묶음",
+    eventId: "EVT-2026-001",
+    sortOrder: 1
+  },
+  {
+    mappingId: "MAP-2026-001-02",
+    groupId: "GRP-2026-001",
+    bundleId: "GRP-2026-001",
+    bundleName: "7월 교직원 필수연수 묶음",
+    eventId: "EVT-2026-002",
+    sortOrder: 2
+  },
+  {
+    mappingId: "MAP-2026-001-03",
+    groupId: "GRP-2026-001",
+    bundleId: "GRP-2026-001",
+    bundleName: "7월 교직원 필수연수 묶음",
+    eventId: "EVT-2026-003",
+    sortOrder: 3
   }
 ];
 
