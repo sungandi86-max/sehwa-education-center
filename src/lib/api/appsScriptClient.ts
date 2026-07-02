@@ -2,7 +2,7 @@ import { APP_CONFIG } from "@/lib/config";
 import { trainingEvents } from "@/lib/mock-data";
 import { mockAppsScriptAdapter, formatDateTime } from "@/lib/api/mockAppsScriptAdapter";
 import type { StaffRow, TrainingEventRow, TrainingMaterialRow } from "@/types/training";
-import type { SubmitGroupAttendanceResult, SubmitAttendanceResult } from "@/lib/api/appsScriptAdapter";
+import type { SubmitGroupAttendanceResult, SubmitAttendanceResult, SubmitQrAttendanceInput } from "@/lib/api/appsScriptAdapter";
 import type { MyTrainingLookupResult } from "@/lib/my-training-lookup";
 
 const APPS_SCRIPT_API_URL = process.env.NEXT_PUBLIC_APPS_SCRIPT_API_URL?.trim();
@@ -266,46 +266,24 @@ export const appsScriptClient = {
 
   getTrainingDetail: mockAppsScriptAdapter.getTrainingDetail.bind(mockAppsScriptAdapter),
   getMyTrainingHistory: mockAppsScriptAdapter.getMyTrainingHistory.bind(mockAppsScriptAdapter),
-  async submitQrAttendance(eventId: string, staffId: string, signature?: string): Promise<SubmitAttendanceResult> {
+  async submitQrAttendance(input: SubmitQrAttendanceInput): Promise<SubmitAttendanceResult | SubmitGroupAttendanceResult> {
     if (!APPS_SCRIPT_API_URL) {
-      return mockAppsScriptAdapter.submitQrAttendance(eventId, staffId);
+      return mockAppsScriptAdapter.submitQrAttendance(input);
     }
 
-    return postAppsScript<SubmitAttendanceResult>({
+    return postAppsScript<SubmitAttendanceResult | SubmitGroupAttendanceResult>({
       action: "submitQrAttendance",
-      eventId,
-      staffId,
-      signature
+      ...input
     });
   },
   async submitGroupQrAttendance(input: { groupId: string; eventIds: string[]; staffId: string; signature?: string }): Promise<SubmitGroupAttendanceResult> {
-    if (!APPS_SCRIPT_API_URL) {
-      return mockAppsScriptAdapter.submitGroupQrAttendance(input);
-    }
-
-    try {
-      return await postAppsScript<SubmitGroupAttendanceResult>({
-        action: "submitGroupQrAttendance",
-        ...input
-      });
-    } catch {
-      const results = [];
-
-      for (const eventId of input.eventIds) {
-        results.push(await appsScriptClient.submitQrAttendance(eventId, input.staffId, input.signature));
-      }
-
-      const completedCount = results.filter((result) => result.ok && result.status !== "already").length;
-      const skippedCount = results.filter((result) => result.ok && result.status === "already").length;
-
-      return {
-        ok: results.every((result) => result.ok),
-        completedCount,
-        skippedCount,
-        results,
-        message: `출석 완료 ${completedCount}건, 이미 출석 처리 ${skippedCount}건`
-      };
-    }
+    return appsScriptClient.submitQrAttendance({
+      mode: "group",
+      groupId: input.groupId,
+      eventIds: input.eventIds,
+      staffId: input.staffId,
+      signature: input.signature
+    }) as Promise<SubmitGroupAttendanceResult>;
   },
   uploadCertificate: mockAppsScriptAdapter.uploadCertificate.bind(mockAppsScriptAdapter),
   getMyUploads: mockAppsScriptAdapter.getMyUploads.bind(mockAppsScriptAdapter),

@@ -19,10 +19,18 @@ export type AppsScriptAction =
   | "lookupMyTrainingStatus"
   | "getMyTrainingHistory"
   | "submitQrAttendance"
-  | "submitGroupQrAttendance"
   | "uploadCertificate"
   | "getMyUploads"
   | "getUploadStatus";
+
+export interface SubmitQrAttendanceInput {
+  mode: "single" | "group";
+  eventId?: string;
+  eventIds?: string[];
+  groupId?: string;
+  staffId: string;
+  signature?: string;
+}
 
 export type AppsScriptRequest =
   | { action: "getAppConfig" }
@@ -33,8 +41,7 @@ export type AppsScriptRequest =
   | { action: "findStaff"; query: string }
   | { action: "lookupMyTrainingStatus"; staffName: string; department?: string; year: string }
   | { action: "getMyTrainingHistory"; query: string; year: string }
-  | { action: "submitQrAttendance"; eventId: string; staffId: string }
-  | { action: "submitGroupQrAttendance"; groupId: string; eventIds: string[]; staffId: string; signature?: string }
+  | ({ action: "submitQrAttendance" } & SubmitQrAttendanceInput)
   | { action: "uploadCertificate"; eventId: string; staffId: string; fileName: string; fileBase64: string }
   | { action: "getMyUploads"; query: string; year?: string }
   | { action: "getUploadStatus"; uploadId: string };
@@ -73,8 +80,7 @@ export interface AppsScriptAdapter {
   findStaff(query: string): Promise<StaffRow | undefined>;
   lookupMyTrainingStatus(input: { staffName: string; department?: string; year: number }): Promise<MyTrainingLookupResult>;
   getMyTrainingHistory(query: string, year: number): Promise<StaffCompletionLookup>;
-  submitQrAttendance(eventId: string, staffId: string): Promise<SubmitAttendanceResult>;
-  submitGroupQrAttendance(input: { groupId: string; eventIds: string[]; staffId: string; signature?: string }): Promise<SubmitGroupAttendanceResult>;
+  submitQrAttendance(input: SubmitQrAttendanceInput): Promise<SubmitAttendanceResult | SubmitGroupAttendanceResult>;
   uploadCertificate(input: {
     eventId: string;
     staffId: string;
@@ -118,8 +124,7 @@ export function createAppsScriptHttpAdapter(apiUrl = process.env.NEXT_PUBLIC_APP
     lookupMyTrainingStatus: (input) =>
       post({ action: "lookupMyTrainingStatus", staffName: input.staffName, department: input.department, year: String(input.year) }),
     getMyTrainingHistory: (query, year) => post({ action: "getMyTrainingHistory", query, year: String(year) }),
-    submitQrAttendance: (eventId, staffId) => post({ action: "submitQrAttendance", eventId, staffId }),
-    submitGroupQrAttendance: (input) => post({ action: "submitGroupQrAttendance", ...input }),
+    submitQrAttendance: (input) => post({ action: "submitQrAttendance", ...input }),
     uploadCertificate: (input) => post({ action: "uploadCertificate", ...input }),
     getMyUploads: (query, year) => post({ action: "getMyUploads", query, year: year ? String(year) : undefined }),
     getUploadStatus: (uploadId) => post({ action: "getUploadStatus", uploadId })

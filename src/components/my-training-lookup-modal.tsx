@@ -26,20 +26,20 @@ export function MyTrainingLookupCard({
       <button
         type="button"
         onClick={() => setIsOpen(true)}
-        className="group flex min-h-56 w-full flex-col rounded-md border border-slate-200 bg-white p-5 text-left shadow-soft transition hover:border-brand-200 hover:bg-brand-50"
+        className="group flex min-h-56 w-full flex-col rounded-[28px] border border-slateblue-100 bg-white p-5 text-left shadow-soft transition hover:border-brand-200 hover:bg-brand-50"
       >
-        <p className="text-sm font-bold text-teal-700">내 이수 확인</p>
-        <h3 className="mt-2 text-xl font-bold text-slateblue-900">내 이수 확인</h3>
+        <p className="text-sm font-bold text-brand-700">내 이수 확인</p>
+        <h3 className="mt-2 text-xl font-bold text-brand-900">내 이수현황</h3>
         <p className="mt-3 text-sm leading-6 text-slate-600">
           {staff ? `${staff.staffName} 선생님의 2026년 교육 이수 현황을 확인합니다.` : "성명으로 본인 확인 후 2026년 교육 이수 현황을 확인합니다."}
         </p>
-        <div className="mt-auto w-full border-t border-slate-200 pt-4">
+        <div className="mt-auto w-full border-t border-slateblue-100 pt-4">
           <div className="flex items-center justify-between gap-3">
-            <p className="font-bold text-slateblue-900">
+            <p className="font-bold text-brand-900">
               이수 {completedCount}건 / 미이수 {incompleteCount}건
             </p>
-            <span className="rounded-md bg-slateblue-900 px-4 py-2 text-sm font-semibold text-white group-hover:bg-brand-700">
-              확인하기
+            <span className="rounded-2xl bg-brand-900 px-4 py-2 text-sm font-semibold text-white group-hover:bg-brand-700">
+              확인
             </span>
           </div>
         </div>
@@ -58,33 +58,40 @@ export function MyTrainingLookupModal({ onClose }: { onClose: () => void }) {
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  const loadTrainingResult = async (staff: StaffSession) => {
+  const loadTrainingResult = async (selectedStaff: StaffSession) => {
     const response = await fetch("/api/my-training", {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        staffName: staff.staffName,
-        department: staff.department,
+        staffName: selectedStaff.staffName,
+        department: selectedStaff.department,
         year: 2026
       })
     });
 
-    const payload = await response.json();
+    const payload = (await response.json()) as MyTrainingLookupResult;
 
     if (response.ok) {
-      setResult(payload as MyTrainingLookupResult);
+      setResult({
+        ...payload,
+        staff: {
+          staffId: selectedStaff.staffId,
+          staffName: selectedStaff.staffName,
+          department: selectedStaff.department
+        }
+      });
     }
   };
 
-  const applyStaffSession = async (staff: StaffSession) => {
-    setStaff(staff);
-    setStaffName(staff.staffName);
-    setDepartment(staff.department);
+  const applyStaffSession = async (selectedStaff: StaffSession) => {
+    setStaff(selectedStaff);
+    setStaffName(selectedStaff.staffName);
+    setDepartment(selectedStaff.department);
     setMatches([]);
     setError("");
-    await loadTrainingResult(staff);
+    await loadTrainingResult(selectedStaff);
   };
 
   const submitLookup = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -120,7 +127,7 @@ export function MyTrainingLookupModal({ onClose }: { onClose: () => void }) {
       const found = payload.data ?? [];
 
       if (found.length === 0) {
-        setError("조회된 교직원이 없습니다. 성명과 소속/부서를 확인해주세요.");
+        setError("조회된 교직원이 없습니다. 성명과 소속부서를 확인해주세요.");
         return;
       }
 
@@ -130,7 +137,7 @@ export function MyTrainingLookupModal({ onClose }: { onClose: () => void }) {
       }
 
       setMatches(found);
-      setError("동명이인이 있습니다. 본인의 소속/부서를 선택해주세요.");
+      setError("동명이인이 있습니다. 본인의 소속부서를 선택해주세요.");
     } catch {
       setError("조회 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.");
     } finally {
@@ -142,11 +149,11 @@ export function MyTrainingLookupModal({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slateblue-950/45 px-4 py-6">
-      <div className="max-h-[88vh] w-full max-w-2xl overflow-y-auto rounded-md border border-slate-200 bg-white shadow-xl">
-        <div className="border-b border-slate-200 px-5 py-4">
-          <p className="text-sm font-bold text-teal-700">내 이수 확인</p>
-          <h2 className="mt-1 text-xl font-bold text-slateblue-900">성명으로 교직원 조회</h2>
-          <p className="mt-2 text-sm leading-6 text-slate-600">로그인 없이 성명으로 조회합니다. 동명이인은 소속/부서로 구분합니다.</p>
+      <div className="max-h-[88vh] w-full max-w-2xl overflow-y-auto rounded-[28px] border border-slateblue-100 bg-white shadow-xl">
+        <div className="border-b border-slateblue-100 px-5 py-4">
+          <p className="text-sm font-bold text-brand-700">내 이수 확인</p>
+          <h2 className="mt-1 text-xl font-bold text-brand-900">성명으로 교직원 조회</h2>
+          <p className="mt-2 text-sm leading-6 text-slate-600">성명과 소속부서로 본인 확인 후 같은 Staff 정보가 모든 화면에 사용됩니다.</p>
         </div>
 
         <form onSubmit={submitLookup} className="space-y-4 px-5 py-5">
@@ -154,7 +161,7 @@ export function MyTrainingLookupModal({ onClose }: { onClose: () => void }) {
 
           <div className="grid gap-3 md:grid-cols-[1fr_0.9fr]">
             <label className="block">
-              <span className="text-sm font-semibold text-slateblue-900">성명 *</span>
+              <span className="text-sm font-semibold text-brand-900">성명 *</span>
               <input
                 value={staffName}
                 onChange={(event) => {
@@ -162,74 +169,66 @@ export function MyTrainingLookupModal({ onClose }: { onClose: () => void }) {
                   setError("");
                 }}
                 required
-                className="focus-ring mt-2 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-                placeholder="예: 박숙현"
+                className="input-soft mt-2 w-full"
+                placeholder="예: 최민정"
               />
             </label>
 
             <label className="block">
-              <span className="text-sm font-semibold text-slateblue-900">소속/부서</span>
+              <span className="text-sm font-semibold text-brand-900">소속부서</span>
               <input
                 value={department}
                 onChange={(event) => {
                   setDepartment(event.target.value);
                   setError("");
                 }}
-                className="focus-ring mt-2 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                className="input-soft mt-2 w-full"
                 placeholder="동명이인일 때 입력"
               />
             </label>
           </div>
 
-          {error ? <p className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">{error}</p> : null}
+          {error ? <p className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">{error}</p> : null}
 
           {matches.length > 1 ? (
-            <div className="space-y-2 rounded-md border border-slate-200 bg-slate-50 p-3">
+            <div className="space-y-2 rounded-[22px] border border-slateblue-100 bg-slateblue-50/70 p-3">
               {matches.map((member) => (
                 <button
                   key={`${member.staffId}-${member.department}`}
                   type="button"
                   onClick={() => applyStaffSession(member)}
-                  className="flex w-full items-center justify-between rounded-md border border-slate-200 bg-white px-4 py-3 text-left hover:border-brand-200 hover:bg-brand-50"
+                  className="flex w-full items-center justify-between rounded-2xl border border-slateblue-100 bg-white px-4 py-3 text-left hover:border-brand-200 hover:bg-brand-50"
                 >
                   <span>
-                    <span className="font-bold text-slateblue-900">{member.staffName}</span>
+                    <span className="font-bold text-brand-900">{member.staffName}</span>
                     <span className="ml-2 text-sm text-slate-500">
                       {member.department}
                       {member.position ? ` · ${member.position}` : ""}
                     </span>
                   </span>
-                  <span className="text-sm font-semibold text-slateblue-900">선택</span>
+                  <span className="text-sm font-semibold text-brand-900">선택</span>
                 </button>
               ))}
             </div>
           ) : null}
 
           <div className="flex justify-end gap-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="focus-ring rounded-md border border-slateblue-900 bg-white px-4 py-2 text-sm font-semibold text-slateblue-900 hover:bg-brand-50"
-            >
+            <button type="button" onClick={onClose} className="btn-secondary">
               닫기
             </button>
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="focus-ring rounded-md bg-slateblue-900 px-5 py-2 text-sm font-semibold text-white hover:bg-brand-700 disabled:cursor-not-allowed disabled:bg-slate-400"
-            >
+            <button type="submit" disabled={isLoading} className="btn-primary">
               {isLoading ? "조회 중" : "조회하기"}
             </button>
           </div>
         </form>
 
         {visibleResult ? (
-          <div className="border-t border-slate-200 bg-slate-50 px-5 py-5">
+          <div className="border-t border-slateblue-100 bg-slateblue-50/70 px-5 py-5">
             <div className="mb-4">
-              <p className="font-bold text-slateblue-900">
+              <p className="font-bold text-brand-900">
                 {visibleResult.staff?.staffName} 선생님 · {visibleResult.staff?.department}
               </p>
-              <p className="mt-1 text-sm text-slate-500">교직원 조회 정보가 새로고침 전까지 유지됩니다.</p>
+              <p className="mt-1 text-sm text-slate-500">교직원 조회 정보가 세션에 저장되었습니다.</p>
             </div>
 
             <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
@@ -241,10 +240,10 @@ export function MyTrainingLookupModal({ onClose }: { onClose: () => void }) {
 
             <div className="mt-4 space-y-3">
               {visibleResult.items.map((item) => (
-                <div key={item.eventId} className="rounded-md border border-slate-200 bg-white px-4 py-3">
+                <div key={item.eventId} className="rounded-2xl border border-slateblue-100 bg-white px-4 py-3">
                   <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
                     <div>
-                      <p className="font-bold text-slateblue-900">{item.title}</p>
+                      <p className="font-bold text-brand-900">{item.title}</p>
                       <p className="mt-1 text-sm text-slate-500">
                         {item.department}
                         {item.completedAt ? ` · ${item.completedAt}` : ""}
@@ -254,7 +253,7 @@ export function MyTrainingLookupModal({ onClose }: { onClose: () => void }) {
                       {item.status}
                     </span>
                   </div>
-                  {item.rejectReason ? <p className="mt-2 rounded-md bg-rose-50 p-2 text-sm text-rose-700">반려 사유: {item.rejectReason}</p> : null}
+                  {item.rejectReason ? <p className="mt-2 rounded-2xl bg-rose-50 p-2 text-sm text-rose-700">반려 사유: {item.rejectReason}</p> : null}
                 </div>
               ))}
             </div>
@@ -267,9 +266,9 @@ export function MyTrainingLookupModal({ onClose }: { onClose: () => void }) {
 
 function SummaryBox({ label, value }: { label: string; value: number }) {
   return (
-    <div className="rounded-md border border-slate-200 bg-white p-3">
+    <div className="rounded-2xl border border-slateblue-100 bg-white p-3">
       <p className="text-xs font-semibold text-slate-500">{label}</p>
-      <p className="mt-1 text-2xl font-bold text-slateblue-900">{value}</p>
+      <p className="mt-1 text-2xl font-bold text-brand-900">{value}</p>
     </div>
   );
 }

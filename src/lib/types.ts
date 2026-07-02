@@ -26,7 +26,7 @@ export interface StaffRow {
   성명: string;
   소속부서: string;
   직위?: string;
-  이메일?: string;
+  이메일: string;
   재직상태: "재직" | "휴직" | "퇴직";
 }
 

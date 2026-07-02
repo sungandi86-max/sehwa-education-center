@@ -9,9 +9,9 @@ export default async function UploadPage({
 }: {
   searchParams: Promise<{ q?: string }>;
 }) {
-  const { q = "T-1004" } = await searchParams;
+  const { q = "" } = await searchParams;
   const events = await appsScriptClient.getTrainings();
-  const result = await appsScriptClient.getMyTrainingHistory(q, APP_CONFIG.currentYear);
+  const result = q ? await appsScriptClient.getMyTrainingHistory(q, APP_CONFIG.currentYear) : { uploads: [] };
   const uploadableEvents = events.filter((event) => event.상태 === "active" || event.상태 === "scheduled");
 
   return (
@@ -35,11 +35,11 @@ export default async function UploadPage({
             </label>
             <label className="grid gap-2 text-sm font-bold text-brand-900">
               교직원ID
-              <input className="input-soft font-normal" placeholder="예: T-1004" />
+              <input className="input-soft font-normal" placeholder="본인 확인 후 자동 연결됩니다." />
             </label>
             <label className="grid gap-2 text-sm font-bold text-brand-900">
               성명
-              <input className="input-soft font-normal" placeholder="이름" />
+              <input className="input-soft font-normal" placeholder="본인 확인 후 자동 연결됩니다." />
             </label>
             <label className="grid gap-2 text-sm font-bold text-brand-900">
               이수증 파일
@@ -54,7 +54,7 @@ export default async function UploadPage({
                 <Sparkles size={18} />
                 AI가 이수증 정보를 확인 중입니다
               </div>
-              업로드 후 이수증 번호, 연수명, 이수일자, 발급기관을 자동 추출하여 담당자 검토용으로 저장합니다.
+              업로드된 이수증에서 번호, 연수명, 이수일자, 발급기관을 자동 추출하여 담당자 검토용으로 저장합니다.
             </div>
           </form>
         </Panel>
@@ -68,7 +68,7 @@ export default async function UploadPage({
             </button>
           </form>
 
-          {result.staff ? (
+          {"staff" in result && result.staff ? (
             <div className="space-y-4">
               {result.uploads.length > 0 ? (
                 result.uploads.map((upload) => (
@@ -104,7 +104,9 @@ export default async function UploadPage({
               )}
             </div>
           ) : (
-            <p className="rounded-[20px] bg-slateblue-50 p-5 text-sm text-slate-500">조회된 교직원이 없습니다.</p>
+            <p className="rounded-[20px] bg-slateblue-50 p-5 text-sm text-slate-500">
+              이름 또는 교직원ID로 제출 상태를 조회해주세요.
+            </p>
           )}
         </Panel>
       </div>

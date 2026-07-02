@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, Printer } from "lucide-react";
-import { BrandMark } from "@/components/brand-mark";
 import { PrintPageButton } from "@/components/print-page-button";
 import { QrDisplayCode } from "@/components/qr-display-code";
 import { appsScriptClient } from "@/lib/api/appsScriptClient";
@@ -32,6 +31,9 @@ export default async function GroupQrPrintPage({ params }: { params: Promise<{ g
   }
 
   const attendanceUrl = `${PRODUCTION_ORIGIN}/qr/group/${groupId}`;
+  const firstEvent = events[0];
+  const lastEvent = events[events.length - 1];
+  const groupTitle = `${firstEvent.제목} 외 ${events.length - 1}개 연수`;
 
   return (
     <div className="mx-auto max-w-4xl print:max-w-none">
@@ -45,22 +47,30 @@ export default async function GroupQrPrintPage({ params }: { params: Promise<{ g
 
       <article className="qr-print-page mx-auto flex min-h-[270mm] max-w-[190mm] flex-col bg-white px-8 py-8 text-center shadow-soft print:min-h-[273mm] print:max-w-none print:px-0 print:py-0 print:shadow-none">
         <header className="border-b border-slateblue-100 pb-6">
-          <div className="flex justify-center">
-            <BrandMark />
+          <p className="text-lg font-extrabold text-brand-900">세화 교직원 교육센터</p>
+          <p className="mt-7 text-sm font-semibold text-brand-600">묶음 교육 QR</p>
+          <h1 className="mt-2 text-3xl font-extrabold leading-tight text-brand-900">{groupTitle}</h1>
+          <div className="mt-5 grid gap-2 text-base font-bold text-slate-600">
+            <p>
+              {formatDateOnly(firstEvent.시작일시)} {formatTimeOnly(firstEvent.시작일시)} - {formatTimeOnly(lastEvent.종료일시)}
+            </p>
+            <p>{firstEvent.장소}</p>
           </div>
-          <p className="mt-7 text-sm font-semibold text-brand-600">묶음 QR 출석</p>
-          <h1 className="mt-2 text-3xl font-extrabold leading-tight text-brand-900">아래 교육을 한 번에 출석 처리합니다.</h1>
         </header>
 
-        <section className="grid gap-2 py-7 text-left">
-          {events.map((event) => (
-            <div key={event.eventId} className="rounded-2xl border border-slateblue-100 px-4 py-3">
-              <p className="font-bold text-brand-900">{event.제목}</p>
-              <p className="mt-1 text-sm text-slate-500">
-                {formatDateOnly(event.시작일시)} {formatTimeOnly(event.시작일시)} - {formatTimeOnly(event.종료일시)} · {event.장소}
-              </p>
-            </div>
-          ))}
+        <section className="py-7 text-left">
+          <p className="text-sm font-bold text-brand-700">교육 목록</p>
+          <div className="mt-3 grid gap-2">
+            {events.map((event, index) => (
+              <div key={event.eventId} className="rounded-2xl border border-slateblue-100 px-4 py-3">
+                <p className="text-xs font-bold text-brand-600">{index + 1}번째 교육</p>
+                <p className="mt-1 font-bold text-brand-900">{event.제목}</p>
+                <p className="mt-1 text-sm text-slate-500">
+                  {formatDateOnly(event.시작일시)} {formatTimeOnly(event.시작일시)} - {formatTimeOnly(event.종료일시)} · {event.장소}
+                </p>
+              </div>
+            ))}
+          </div>
         </section>
 
         <section className="flex flex-1 flex-col items-center justify-center py-4">

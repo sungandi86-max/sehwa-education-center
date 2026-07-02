@@ -73,6 +73,7 @@ export function QrAttendanceConfirm({
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
+          mode: isGroup ? "group" : "single",
           eventId: isGroup ? undefined : attendanceEvents[0]?.eventId,
           eventIds: isGroup ? attendanceEvents.map((item) => item.eventId) : undefined,
           groupId,

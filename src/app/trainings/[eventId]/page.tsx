@@ -21,7 +21,7 @@ export default async function TrainingDetailPage({ params }: { params: Promise<{
 
   return (
     <div className="space-y-8">
-      <PageHeader title="교육 상세" description="교육 정보와 자료를 확인하고 필요한 업무를 바로 시작합니다." />
+      <PageHeader title="교육 상세" description="교육 정보와 담당자가 Google Sheet에 등록한 자료를 확인합니다." />
 
       <section className="quiet-card overflow-hidden">
         <div className="bg-gradient-to-br from-white via-white to-brand-50/70 p-7 md:p-8">

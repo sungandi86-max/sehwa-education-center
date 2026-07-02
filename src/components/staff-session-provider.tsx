@@ -112,7 +112,7 @@ export function StaffSessionBanner({ compact = false }: { compact?: boolean }) {
   if (!staff) {
     return compact ? null : (
       <div className="quiet-card px-5 py-4 text-sm leading-6 text-slate-600">
-        내 이수 확인 카드에서 성명으로 본인 확인을 하면 이수 확인과 이수증 제출에 같은 교직원 정보가 사용됩니다.
+        본인 확인 후 QR 출석, 이수증 제출, 내 이수현황에서 같은 교직원 정보가 사용됩니다.
       </div>
     );
   }

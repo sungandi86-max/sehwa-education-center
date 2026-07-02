@@ -28,7 +28,7 @@ const statusLabelMap: Record<string, string> = {
   active: "진행중",
   completed: "완료",
   archived: "보관",
-  pending: "확인중",
+  pending: "대기",
   extracted: "추출완료",
   needReview: "확인필요",
   failed: "실패"
@@ -44,7 +44,7 @@ export function PageHeader({
   action?: React.ReactNode;
 }) {
   return (
-    <div className="mb-8 flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
+    <div className="mb-8 flex flex-col gap-5 md:flex-row md:items-end md:justify-between print:hidden">
       <div>
         <Link href="/" className="btn-secondary mb-5 w-fit px-4">
           <ArrowLeft size={17} />

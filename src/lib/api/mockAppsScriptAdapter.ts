@@ -12,6 +12,7 @@ import type {
   AppsScriptAdapter,
   AppsScriptRequest,
   SubmitAttendanceResult,
+  SubmitGroupAttendanceResult,
   UploadCertificateResult
 } from "./appsScriptAdapter";
 import type { CertificateUploadRow, CompletionHistoryViewRow, TrainingAttendanceRow } from "@/types/training";
@@ -28,8 +29,8 @@ export const formatDateTime = (value?: string) =>
 
 const mockAttendances: TrainingAttendanceRow[] = [...trainingAttendances];
 
-const createCompletionHistory = (): CompletionHistoryViewRow[] => {
-  return trainingTargets.map((target) => {
+const createCompletionHistory = (): CompletionHistoryViewRow[] =>
+  trainingTargets.map((target) => {
     const attendance = mockAttendances.find(
       (row) => row.eventId === target.eventId && row.교직원ID === target.교직원ID
     );
@@ -49,7 +50,6 @@ const createCompletionHistory = (): CompletionHistoryViewRow[] => {
       이수경로: completionSource
     };
   });
-};
 
 const getCompletionHistory = () => createCompletionHistory();
 
@@ -80,11 +80,11 @@ export const mockAppsScriptAdapter: AppsScriptAdapter = {
       case "getMyTrainingHistory":
         return this.getMyTrainingHistory(payload.query, Number(payload.year)) as Promise<T>;
       case "submitQrAttendance":
-        return this.submitQrAttendance(payload.eventId, payload.staffId) as Promise<T>;
-      case "submitGroupQrAttendance":
-        return this.submitGroupQrAttendance({
-          groupId: payload.groupId,
+        return this.submitQrAttendance({
+          mode: payload.mode,
+          eventId: payload.eventId,
           eventIds: payload.eventIds,
+          groupId: payload.groupId,
           staffId: payload.staffId,
           signature: payload.signature
         }) as Promise<T>;
@@ -169,66 +169,30 @@ export const mockAppsScriptAdapter: AppsScriptAdapter = {
     };
   },
 
-  async submitQrAttendance(eventId, staffId): Promise<SubmitAttendanceResult> {
-    const event = trainingEvents.find((item) => item.eventId === eventId);
-    const member = staff.find((item) => item.교직원ID === staffId);
+  async submitQrAttendance(input): Promise<SubmitAttendanceResult | SubmitGroupAttendanceResult> {
+    const eventIds = input.mode === "group" ? input.eventIds ?? [] : input.eventId ? [input.eventId] : [];
+    const results: SubmitAttendanceResult[] = [];
 
-    if (!event || !member) {
+    for (const eventId of eventIds) {
+      results.push(await submitSingleAttendance(eventId, input.staffId));
+    }
+
+    if (input.mode === "group") {
+      const completedCount = results.filter((result) => result.ok && result.status === "completed").length;
+      const skippedCount = results.filter((result) => result.ok && result.status === "already").length;
+
       return {
-        ok: false,
-        eventId,
-        message: "교육 또는 교직원 정보를 확인할 수 없습니다."
+        ok: results.every((result) => result.ok),
+        completedCount,
+        skippedCount,
+        results,
+        message: `출석 완료 ${completedCount}건, 이미 출석 처리 ${skippedCount}건`
       };
     }
 
-    const duplicated = mockAttendances.find((row) => row.eventId === eventId && row.교직원ID === staffId);
-
-    if (duplicated) {
-      return {
-        ok: true,
-        eventId,
-        attendanceId: duplicated.attendanceId,
-        status: "already",
-        message: "이미 출석 처리된 교육입니다."
-      };
-    }
-
-    const attendanceId = `MOCK-ATT-${eventId}-${staffId}-${Date.now()}`;
-    mockAttendances.push({
-      attendanceId,
-      eventId,
-      교직원ID: member.교직원ID,
-      성명: member.성명,
-      소속부서: member.소속부서,
-      참석일시: new Date().toISOString(),
-      참석방법: "QR"
-    });
-
-    return {
-      ok: true,
-      eventId,
-      attendanceId,
-      status: "completed",
-      message: "QR 출석이 확인되었습니다. 담당자가 확인할 수 있도록 출석 기록에 반영됩니다."
-    };
-  },
-
-  async submitGroupQrAttendance(input) {
-    const results = [];
-
-    for (const eventId of input.eventIds) {
-      results.push(await this.submitQrAttendance(eventId, input.staffId));
-    }
-
-    const completedCount = results.filter((result) => result.ok && result.status === "completed").length;
-    const skippedCount = results.filter((result) => result.ok && result.status === "already").length;
-
-    return {
-      ok: results.every((result) => result.ok),
-      completedCount,
-      skippedCount,
-      results,
-      message: `출석 완료 ${completedCount}건, 이미 출석 처리 ${skippedCount}건`
+    return results[0] ?? {
+      ok: false,
+      message: "교육 정보가 필요합니다."
     };
   },
 
@@ -252,3 +216,47 @@ export const mockAppsScriptAdapter: AppsScriptAdapter = {
     return certificateUploads.find((upload) => upload.uploadId === uploadId);
   }
 };
+
+async function submitSingleAttendance(eventId: string, staffId: string): Promise<SubmitAttendanceResult> {
+  const event = trainingEvents.find((item) => item.eventId === eventId);
+  const member = staff.find((item) => item.교직원ID === staffId);
+
+  if (!event || !member) {
+    return {
+      ok: false,
+      eventId,
+      message: "교육 또는 교직원 정보를 확인할 수 없습니다."
+    };
+  }
+
+  const duplicated = mockAttendances.find((row) => row.eventId === eventId && row.교직원ID === staffId);
+
+  if (duplicated) {
+    return {
+      ok: true,
+      eventId,
+      attendanceId: duplicated.attendanceId,
+      status: "already",
+      message: "이미 출석 처리된 교육입니다."
+    };
+  }
+
+  const attendanceId = `MOCK-ATT-${eventId}-${staffId}-${Date.now()}`;
+  mockAttendances.push({
+    attendanceId,
+    eventId,
+    교직원ID: member.교직원ID,
+    성명: member.성명,
+    소속부서: member.소속부서,
+    참석일시: new Date().toISOString(),
+    참석방법: "QR"
+  });
+
+  return {
+    ok: true,
+    eventId,
+    attendanceId,
+    status: "completed",
+    message: "QR 출석이 확인되었습니다."
+  };
+}

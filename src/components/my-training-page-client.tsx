@@ -3,7 +3,7 @@
 import { CheckCircle2, Clock3, FileText, LoaderCircle, Search, XCircle } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { MyTrainingLookupModal } from "@/components/my-training-lookup-modal";
-import { StaffSessionBanner, useStaffSession } from "@/components/staff-session-provider";
+import { StaffSessionBanner, useStaffSession, type StaffSession } from "@/components/staff-session-provider";
 import type { MyTrainingItemStatus, MyTrainingLookupResult } from "@/lib/my-training-lookup";
 
 const statusClassMap: Record<MyTrainingItemStatus, string> = {
@@ -11,6 +11,13 @@ const statusClassMap: Record<MyTrainingItemStatus, string> = {
   미이수: "bg-rose-50 text-rose-700 ring-rose-100",
   승인대기: "bg-amber-50 text-amber-700 ring-amber-100",
   반려: "bg-rose-50 text-rose-700 ring-rose-100"
+};
+
+const emptySummary = {
+  completedCount: 0,
+  incompleteCount: 0,
+  pendingCount: 0,
+  rejectedCount: 0
 };
 
 export function MyTrainingPageClient() {
@@ -25,7 +32,9 @@ export function MyTrainingPageClient() {
       return;
     }
 
-    const load = async () => {
+    const controller = new AbortController();
+
+    const load = async (currentStaff: StaffSession) => {
       setIsLoading(true);
       setError("");
 
@@ -36,10 +45,11 @@ export function MyTrainingPageClient() {
             "Content-Type": "application/json"
           },
           body: JSON.stringify({
-            staffName: staff.staffName,
-            department: staff.department,
+            staffName: currentStaff.staffName,
+            department: currentStaff.department,
             year: 2026
-          })
+          }),
+          signal: controller.signal
         });
         const payload = (await response.json()) as MyTrainingLookupResult & { error?: string };
 
@@ -49,50 +59,53 @@ export function MyTrainingPageClient() {
 
         setResult({
           ...payload,
-          staff: payload.staff ?? staff
+          staff: {
+            staffId: currentStaff.staffId,
+            staffName: currentStaff.staffName,
+            department: currentStaff.department
+          }
         });
       } catch (loadError) {
+        if (loadError instanceof DOMException && loadError.name === "AbortError") {
+          return;
+        }
         setError(loadError instanceof Error ? loadError.message : "이수현황 조회 중 오류가 발생했습니다.");
       } finally {
         setIsLoading(false);
       }
     };
 
-    void load();
+    void load(staff);
+
+    return () => controller.abort();
   }, [staff]);
 
-  const visibleResult = staff && result?.staff?.staffId === staff.staffId ? result : null;
-  const visibleError = staff ? error : "";
+  const currentStaff = staff;
+  const visibleResult =
+    currentStaff && result?.staff?.staffId === currentStaff.staffId && result.staff.staffName === currentStaff.staffName
+      ? result
+      : null;
 
-  const summary = useMemo(
-    () =>
-      visibleResult?.summary ?? {
-        completedCount: 0,
-        incompleteCount: 0,
-        pendingCount: 0,
-        rejectedCount: 0
-      },
-    [visibleResult]
-  );
+  const summary = useMemo(() => visibleResult?.summary ?? emptySummary, [visibleResult]);
 
   return (
     <div className="space-y-8">
       <StaffSessionBanner />
 
-      {!staff ? (
+      {!currentStaff ? (
         <section className="quiet-card bg-gradient-to-br from-white via-white to-brand-50/70 p-7 text-center">
           <div className="mx-auto flex size-16 items-center justify-center rounded-[24px] bg-brand-50 text-brand-900">
             <Search size={30} />
           </div>
-          <h2 className="mt-5 text-2xl font-semibold text-brand-900">성명으로 본인 확인 후 조회합니다.</h2>
-          <p className="mt-3 text-sm leading-7 text-slate-500">로그인 없이 교직원명과 소속부서로 내 연수 이수현황을 확인할 수 있습니다.</p>
+          <h2 className="mt-5 text-2xl font-semibold text-brand-900">본인 확인 후 이수현황을 조회합니다.</h2>
+          <p className="mt-3 text-sm leading-7 text-slate-500">성명과 소속부서로 교직원을 확인하면 해당 Staff 정보만 이 화면 전체에 사용됩니다.</p>
           <button type="button" onClick={() => setIsLookupOpen(true)} className="btn-primary mt-6 w-full sm:w-auto">
-            성명으로 조회
+            교직원 조회
           </button>
         </section>
       ) : null}
 
-      {staff ? (
+      {currentStaff ? (
         <section className="grid gap-4 md:grid-cols-4">
           <SummaryCard icon={<CheckCircle2 size={21} />} label="이수 완료" value={summary.completedCount} tone="text-emerald-700" />
           <SummaryCard icon={<Clock3 size={21} />} label="미이수" value={summary.incompleteCount} tone="text-rose-700" />
@@ -108,13 +121,15 @@ export function MyTrainingPageClient() {
         </section>
       ) : null}
 
-      {visibleError ? <p className="rounded-[22px] bg-rose-50 p-4 text-sm font-semibold text-rose-700">{visibleError}</p> : null}
+      {currentStaff && error ? <p className="rounded-[22px] bg-rose-50 p-4 text-sm font-semibold text-rose-700">{error}</p> : null}
 
-      {staff && visibleResult && !isLoading ? (
+      {currentStaff && visibleResult && !isLoading ? (
         <section className="quiet-card overflow-hidden">
           <div className="border-b border-slateblue-100 px-6 py-5">
-            <h2 className="text-xl font-semibold text-brand-900">{staff.staffName} 선생님의 2026 교육현황</h2>
-            <p className="mt-1 text-sm leading-6 text-slate-500">교육 하나마다 이수 상태와 이수증 제출 상태를 함께 표시합니다.</p>
+            <h2 className="text-xl font-semibold text-brand-900">{currentStaff.staffName} 선생님의 2026 교육현황</h2>
+            <p className="mt-1 text-sm leading-6 text-slate-500">
+              교육별 이수 상태와 이수증 제출 상태를 하나의 카드에서 확인합니다.
+            </p>
           </div>
           <div className="grid gap-4 p-6">
             {visibleResult.items.map((item) => (

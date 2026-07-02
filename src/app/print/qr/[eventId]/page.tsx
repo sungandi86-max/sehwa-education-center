@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, Printer } from "lucide-react";
-import { BrandMark } from "@/components/brand-mark";
 import { PrintPageButton } from "@/components/print-page-button";
 import { QrDisplayCode } from "@/components/qr-display-code";
 import { appsScriptClient } from "@/lib/api/appsScriptClient";
@@ -46,10 +45,8 @@ export default async function QrPrintPage({ params }: { params: Promise<{ eventI
 
       <article className="qr-print-page mx-auto flex min-h-[270mm] max-w-[190mm] flex-col bg-white px-8 py-8 text-center shadow-soft print:min-h-[273mm] print:max-w-none print:px-0 print:py-0 print:shadow-none">
         <header className="border-b border-slateblue-100 pb-7">
-          <div className="flex justify-center">
-            <BrandMark />
-          </div>
-          <h1 className="mt-8 text-3xl font-extrabold leading-tight text-brand-900">{event.제목}</h1>
+          <p className="text-lg font-extrabold text-brand-900">세화 교직원 교육센터</p>
+          <h1 className="mt-7 text-3xl font-extrabold leading-tight text-brand-900">{event.제목}</h1>
           <div className="mt-5 grid gap-2 text-base font-bold text-slate-600">
             <p>
               {formatDateOnly(event.시작일시)} {formatTimeOnly(event.시작일시)} - {formatTimeOnly(event.종료일시)}
@@ -58,7 +55,15 @@ export default async function QrPrintPage({ params }: { params: Promise<{ eventI
           </div>
         </header>
 
-        <section className="flex flex-1 flex-col items-center justify-center py-10">
+        <section className="py-8 text-left">
+          <p className="text-sm font-bold text-brand-700">교육 목록</p>
+          <div className="mt-3 rounded-[24px] border border-slateblue-100 px-5 py-4">
+            <p className="text-xl font-extrabold text-brand-900">{event.제목}</p>
+            <p className="mt-2 text-sm text-slate-500">{event.담당부서}</p>
+          </div>
+        </section>
+
+        <section className="flex flex-1 flex-col items-center justify-center py-6">
           <div className="w-full max-w-[118mm] print:max-w-[120mm]">
             <QrDisplayCode value={attendanceUrl} large />
           </div>
