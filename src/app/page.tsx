@@ -151,10 +151,10 @@ export default async function PortalHomePage() {
                     QR 출석
                   </Link>
                   <Link
-                    href={`/qr/display/${event.eventId}`}
+                    href={`/print/qr/${event.eventId}`}
                     className="rounded-md border border-slateblue-900 bg-white px-4 py-2 text-center text-sm font-semibold text-slateblue-900 hover:bg-brand-50"
                   >
-                    QR 보기
+                    QR 출력
                   </Link>
                 </div>
               </div>

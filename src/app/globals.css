@@ -33,3 +33,14 @@ textarea {
 .focus-ring {
   @apply focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2;
 }
+
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 12mm;
+  }
+
+  body {
+    background: #ffffff;
+  }
+}
