@@ -16,7 +16,7 @@ export default async function QrPortalPage() {
 
       <div className="grid gap-4">
         {availableEvents.map((event) => (
-          <Link key={event.eventId} href={`/qr/${event.eventId}`} className="group block rounded-md border border-slate-200 bg-white p-5 shadow-soft hover:border-brand-200 hover:bg-brand-50">
+          <div key={event.eventId} className="rounded-md border border-slate-200 bg-white p-5 shadow-soft">
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
               <div className="min-w-0">
                 <div className="mb-2 flex flex-wrap items-center gap-2">
@@ -28,11 +28,16 @@ export default async function QrPortalPage() {
                   {formatDateTime(event.시작일시)} · {event.장소}
                 </p>
               </div>
-              <span className="shrink-0 rounded-md bg-slateblue-900 px-5 py-2 text-sm font-semibold text-white group-hover:bg-brand-700">
-                출석 화면 열기
-              </span>
+              <div className="flex shrink-0 flex-wrap gap-2">
+                <Link href={`/qr/${event.eventId}`} className="rounded-md bg-slateblue-900 px-5 py-2 text-sm font-semibold text-white hover:bg-brand-700">
+                  QR 출석
+                </Link>
+                <Link href={`/qr/display/${event.eventId}`} className="rounded-md border border-slateblue-900 bg-white px-5 py-2 text-sm font-semibold text-slateblue-900 hover:bg-brand-50">
+                  QR 보기
+                </Link>
+              </div>
             </div>
-          </Link>
+          </div>
         ))}
       </div>
     </div>

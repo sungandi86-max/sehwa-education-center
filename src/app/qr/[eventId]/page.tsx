@@ -57,7 +57,7 @@ export default async function QrAttendancePage({ params }: { params: Promise<{ e
           </div>
 
           <div className="mt-5">
-            <QrAttendanceConfirm eventId={event.eventId} />
+            <QrAttendanceConfirm eventId={event.eventId} eventTitle={event.제목} />
           </div>
         </div>
       </Panel>

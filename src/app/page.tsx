@@ -143,12 +143,20 @@ export default async function PortalHomePage() {
                     </p>
                   </div>
                 </div>
-                <Link
-                  href={`/qr/${event.eventId}`}
-                  className="shrink-0 rounded-md bg-slateblue-900 px-4 py-2 text-center text-sm font-semibold text-white hover:bg-brand-700"
-                >
-                  QR 출석
-                </Link>
+                <div className="flex shrink-0 flex-wrap gap-2">
+                  <Link
+                    href={`/qr/${event.eventId}`}
+                    className="rounded-md bg-slateblue-900 px-4 py-2 text-center text-sm font-semibold text-white hover:bg-brand-700"
+                  >
+                    QR 출석
+                  </Link>
+                  <Link
+                    href={`/qr/display/${event.eventId}`}
+                    className="rounded-md border border-slateblue-900 bg-white px-4 py-2 text-center text-sm font-semibold text-slateblue-900 hover:bg-brand-50"
+                  >
+                    QR 보기
+                  </Link>
+                </div>
               </div>
             ))}
           </div>

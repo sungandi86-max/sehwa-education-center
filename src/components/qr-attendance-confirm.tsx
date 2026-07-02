@@ -4,7 +4,7 @@ import { useState } from "react";
 import { MyTrainingLookupModal } from "@/components/my-training-lookup-modal";
 import { useStaffSession } from "@/components/staff-session-provider";
 
-export function QrAttendanceConfirm({ eventId }: { eventId: string }) {
+export function QrAttendanceConfirm({ eventId, eventTitle }: { eventId: string; eventTitle: string }) {
   const { staff } = useStaffSession();
   const [isLookupOpen, setIsLookupOpen] = useState(false);
   const [status, setStatus] = useState<"idle" | "submitting" | "done">("idle");
@@ -52,7 +52,9 @@ export function QrAttendanceConfirm({ eventId }: { eventId: string }) {
     <div className="rounded-md border border-slate-200 bg-slate-50 p-5">
       <p className="text-sm font-semibold text-slate-500">출석 확인</p>
       <p className="mt-2 text-lg font-bold text-slateblue-900">{staff.staffName} 선생님</p>
-      <p className="mt-1 text-sm text-slate-600">출석하시겠습니까?</p>
+      <p className="mt-1 text-sm text-slate-600">
+        {staff.staffName} 선생님, {eventTitle}에 출석하시겠습니까?
+      </p>
       <button
         type="button"
         onClick={submitAttendance}
