@@ -14,7 +14,10 @@
 
 body {
   margin: 0;
-  background: var(--background);
+  background:
+    radial-gradient(circle at top left, rgba(238, 232, 255, 0.58), transparent 30rem),
+    radial-gradient(circle at top right, rgba(231, 240, 255, 0.72), transparent 34rem),
+    var(--background);
   color: var(--foreground);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
@@ -41,7 +44,23 @@ textarea {
 }
 
 .quiet-card {
-  @apply rounded-[32px] border border-slateblue-100 bg-white shadow-soft;
+  @apply rounded-[32px] border border-slateblue-100 bg-white/[0.92] shadow-soft backdrop-blur;
+}
+
+.app-panel {
+  @apply rounded-[32px] border border-white/80 bg-white/[0.74] p-3 shadow-[0_28px_90px_rgba(23,59,115,0.10)] backdrop-blur md:rounded-[36px] md:p-5;
+}
+
+.app-panel-inner {
+  @apply rounded-[28px] border border-slateblue-100/80 bg-gradient-to-b from-white to-[#FBFCFF] p-4 md:rounded-[32px] md:p-7;
+}
+
+.app-card {
+  @apply rounded-[30px] border border-slateblue-100 bg-white/[0.92] shadow-[0_22px_64px_rgba(23,59,115,0.08),0_6px_18px_rgba(23,59,115,0.035)] backdrop-blur transition duration-[250ms] ease-out hover:-translate-y-1 hover:border-brand-900 hover:shadow-lift;
+}
+
+.app-muted-card {
+  @apply rounded-[26px] border border-slateblue-100 bg-slateblue-50/70 p-5;
 }
 
 .btn-primary {
@@ -53,7 +72,7 @@ textarea {
 }
 
 .input-soft {
-  @apply focus-ring min-h-11 rounded-2xl border border-slateblue-100 bg-white px-4 py-2.5 text-sm text-slateblue-900 shadow-sm placeholder:text-slate-400;
+  @apply focus-ring min-h-[52px] rounded-[18px] border border-slateblue-100 bg-white px-4 py-3 text-sm text-slateblue-900 shadow-[0_8px_18px_rgba(23,59,115,0.035)] placeholder:text-slate-400;
 }
 
 .animate-soft-in {

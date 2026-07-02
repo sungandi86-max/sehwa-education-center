@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Printer, QrCode } from "lucide-react";
+import { ArrowRight, Camera, Printer, QrCode } from "lucide-react";
 import { PageHeader, StatusBadge } from "@/components/ui";
 import { appsScriptClient, formatDateTime } from "@/lib/api/appsScriptClient";
 
@@ -11,15 +11,35 @@ export default async function QrPortalPage() {
   const availableEvents = events.filter((event) => event.상태 === "active" || event.상태 === "scheduled");
 
   return (
-    <div className="space-y-8">
-      <PageHeader title="QR 출석" description="참여할 교육을 선택한 뒤 QR 출석 화면에서 본인 확인과 전자서명을 진행합니다." />
+    <div className="mx-auto max-w-3xl space-y-6">
+      <PageHeader title="QR 출석" description="연수장에서 QR 코드를 스캔하세요." />
 
-      <div className="rounded-[24px] border border-brand-100 bg-gradient-to-r from-brand-50 to-softpurple-50 px-6 py-5 text-sm leading-7 text-slate-700">
-        오늘 또는 이번 주 참여 가능한 교육입니다. 여러 연수를 연속으로 진행할 때는 묶음 QR로 한 번만 서명받을 수 있습니다.
-      </div>
+      <section className="app-card overflow-hidden bg-gradient-to-br from-white via-white to-[#EEF5FF] p-6 text-center md:p-8">
+        <div className="mx-auto flex size-20 items-center justify-center rounded-[28px] bg-gradient-to-br from-[#5E6CFF] to-[#3650D8] text-white shadow-[0_20px_44px_rgba(54,80,216,0.22)]">
+          <QrCode size={40} strokeWidth={1.75} />
+        </div>
+        <h1 className="mt-6 text-[1.8rem] font-semibold tracking-tight text-brand-900">QR 코드를 스캔해주세요</h1>
+        <p className="mx-auto mt-3 max-w-sm text-sm font-medium leading-7 text-slate-500">
+          교육장에 비치된 QR을 휴대폰 카메라로 스캔하면 출석 확인 화면으로 이동합니다.
+        </p>
+        <div className="mx-auto mt-7 flex aspect-square max-w-[260px] items-center justify-center rounded-[30px] border border-slateblue-100 bg-white shadow-[0_20px_54px_rgba(23,59,115,0.08)]">
+          <div className="grid size-40 place-items-center rounded-[26px] bg-slateblue-50 text-brand-900">
+            <QrCode size={86} strokeWidth={1.5} />
+          </div>
+        </div>
+        <div className="mt-7 grid gap-3 sm:grid-cols-2">
+          <button type="button" className="btn-primary">
+            <Camera size={18} />
+            카메라 열기
+          </button>
+          <Link href="/my" className="btn-secondary">
+            내 이수 확인으로 이동
+          </Link>
+        </div>
+      </section>
 
       {groupEvents.length > 0 ? (
-        <div className="soft-card bg-gradient-to-br from-white via-white to-[#EEF7FF] p-6">
+        <div className="app-card bg-gradient-to-br from-white via-white to-[#EEF7FF] p-6">
           <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
             <div>
               <p className="text-sm font-semibold text-brand-600">묶음 QR</p>
@@ -44,7 +64,7 @@ export default async function QrPortalPage() {
 
       <div className="grid gap-5">
         {availableEvents.map((event) => (
-          <div key={event.eventId} className="soft-card p-6">
+          <div key={event.eventId} className="app-card p-6">
             <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
               <div className="min-w-0">
                 <div className="mb-3 flex flex-wrap items-center gap-2">
@@ -70,6 +90,11 @@ export default async function QrPortalPage() {
           </div>
         ))}
       </div>
+
+      <Link href="/" className="mx-auto flex w-fit items-center gap-2 text-sm font-semibold text-brand-700">
+        홈으로 돌아가기
+        <ArrowRight size={16} />
+      </Link>
     </div>
   );
 }

@@ -129,13 +129,13 @@ export function MyTrainingPageClient() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="mx-auto max-w-4xl space-y-6">
       {!currentStaff ? (
-        <section className="quiet-card bg-gradient-to-br from-white via-white to-brand-50/70 p-7 text-center">
-          <div className="mx-auto flex size-16 items-center justify-center rounded-[24px] bg-brand-50 text-brand-900">
+        <section className="app-card bg-gradient-to-br from-white via-white to-brand-50/70 p-7 text-center">
+          <div className="mx-auto flex size-20 items-center justify-center rounded-[28px] bg-gradient-to-br from-[#F46AA8] to-[#E83E8D] text-white shadow-[0_18px_42px_rgba(232,62,141,0.18)]">
             <Search size={30} />
           </div>
-          <h2 className="mt-5 text-2xl font-semibold text-brand-900">본인 확인 후 내 이수현황을 조회합니다</h2>
+          <h2 className="mt-5 text-[1.7rem] font-semibold text-brand-900">본인 확인 후 내 이수현황을 조회합니다</h2>
           <p className="mt-3 text-sm leading-7 text-slate-500">
             조회된 교직원 정보 하나가 상단 정보, 요약, 교육별 이수 상태에 동일하게 적용됩니다.
           </p>
@@ -145,11 +145,11 @@ export function MyTrainingPageClient() {
         </section>
       ) : (
         <>
-          <section className="quiet-card p-6">
+          <section className="app-card bg-gradient-to-br from-white via-white to-[#FFF0F6] p-6">
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
               <div>
-                <p className="text-sm font-bold text-brand-700">조회 대상</p>
-                <h2 className="mt-1 text-2xl font-extrabold text-brand-900">{currentStaff.staffName} 선생님</h2>
+                <p className="text-sm font-semibold text-brand-700">조회 대상</p>
+                <h2 className="mt-1 text-2xl font-semibold text-brand-900">{currentStaff.staffName} 선생님</h2>
                 <p className="mt-2 text-sm font-semibold text-slate-500">
                   {currentStaff.department}
                   {currentStaff.position ? ` · ${currentStaff.position}` : ""}
@@ -162,7 +162,7 @@ export function MyTrainingPageClient() {
             </div>
           </section>
 
-          <section className="grid gap-4 md:grid-cols-4">
+          <section className="grid gap-4 sm:grid-cols-2 md:grid-cols-4">
             <SummaryCard icon={<AlertTriangle size={21} />} label="미이수" value={summary.incompleteCount} tone="text-rose-700" />
             <SummaryCard icon={<Clock3 size={21} />} label="승인대기" value={summary.pendingCount} tone="text-amber-700" />
             <SummaryCard icon={<XCircle size={21} />} label="반려" value={summary.rejectedCount} tone="text-red-700" />
@@ -172,7 +172,7 @@ export function MyTrainingPageClient() {
       )}
 
       {isLoading ? (
-        <section className="quiet-card p-8 text-center">
+        <section className="app-card p-8 text-center">
           <LoaderCircle className="mx-auto animate-spin text-brand-900" size={34} />
           <p className="mt-4 text-sm font-medium text-slate-500">이수현황을 불러오고 있습니다.</p>
         </section>
@@ -181,7 +181,7 @@ export function MyTrainingPageClient() {
       {currentStaff && error ? <p className="rounded-[22px] bg-rose-50 p-4 text-sm font-semibold text-rose-700">{error}</p> : null}
 
       {currentStaff && visibleResult && !isLoading ? (
-        <section className="quiet-card overflow-hidden">
+        <section className="app-card overflow-hidden">
           <div className="border-b border-slateblue-100 px-6 py-5">
             <h2 className="text-xl font-semibold text-brand-900">{currentStaff.staffName} 선생님의 2026 교육 이수현황</h2>
             <p className="mt-1 text-sm leading-6 text-slate-500">
@@ -230,8 +230,8 @@ function SummaryCard({
   tone: string;
 }) {
   return (
-    <div className="soft-card p-5">
-      <div className="flex size-11 items-center justify-center rounded-2xl bg-white text-brand-900 ring-1 ring-slateblue-100">{icon}</div>
+    <div className="app-card p-5">
+      <div className="flex size-14 items-center justify-center rounded-[22px] bg-white text-brand-900 ring-1 ring-slateblue-100 shadow-[0_10px_24px_rgba(23,59,115,0.055)]">{icon}</div>
       <p className="mt-4 text-sm font-medium text-slate-500">{label}</p>
       <p className={`mt-1 text-3xl font-semibold ${tone}`}>{value}건</p>
     </div>
@@ -243,7 +243,7 @@ function TrainingStatusCard({ item }: { item: MyTrainingLookupItem }) {
   const uploadStatus = getUploadStatus(item);
 
   return (
-    <div className="rounded-[24px] border border-slateblue-100 bg-gradient-to-br from-white via-white to-slateblue-50 p-5 shadow-[0_14px_40px_rgba(23,59,115,0.045)]">
+    <div className="rounded-[28px] border border-slateblue-100 bg-gradient-to-br from-white via-white to-slateblue-50 p-5 shadow-[0_14px_40px_rgba(23,59,115,0.045)] transition duration-[250ms] hover:-translate-y-1 hover:border-brand-900 hover:shadow-lift">
       <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
         <div>
           <p className="text-lg font-semibold text-brand-900">{item.title}</p>
@@ -271,7 +271,7 @@ function StatusBadge({ status }: { status: DisplayStatus }) {
 
 function Detail({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-2xl bg-white/80 p-4 ring-1 ring-slateblue-100">
+    <div className="rounded-[22px] bg-white/86 p-4 shadow-[0_8px_20px_rgba(23,59,115,0.035)] ring-1 ring-slateblue-100">
       <p className="text-xs font-medium text-slate-500">{label}</p>
       <p className="mt-1 text-sm font-semibold leading-6 text-brand-900">{value}</p>
     </div>

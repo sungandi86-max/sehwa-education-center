@@ -243,10 +243,10 @@ function AttendanceConfirmScreen({
   const mainEvent = events[0];
 
   return (
-    <section className="quiet-card animate-soft-in overflow-hidden rounded-[30px]">
-      <div className="bg-gradient-to-br from-white via-white to-brand-50/80 p-5 sm:p-7">
+    <section className="app-card animate-soft-in overflow-hidden rounded-[32px]">
+      <div className="bg-gradient-to-br from-white via-white to-[#EEF5FF] p-5 sm:p-7">
         <p className="text-sm font-semibold text-brand-600">{isGroup ? "묶음 QR 출석" : "교육 정보 확인"}</p>
-        <h1 className="mt-3 text-3xl font-semibold leading-tight text-brand-900">
+        <h1 className="mt-3 text-[1.85rem] font-semibold leading-tight tracking-tight text-brand-900">
           {isGroup ? "한 번의 서명으로 여러 교육에 출석합니다." : mainEvent.title}
         </h1>
         {isGroup ? (
@@ -258,7 +258,7 @@ function AttendanceConfirmScreen({
         {isGroup ? (
           <div className="space-y-3">
             {events.map((item, index) => (
-              <div key={item.eventId} className="rounded-[22px] border border-slateblue-100 bg-white/80 p-4">
+              <div key={item.eventId} className="rounded-[26px] border border-slateblue-100 bg-white/86 p-4 shadow-[0_10px_26px_rgba(23,59,115,0.035)]">
                 <p className="text-xs font-semibold text-brand-600">{index + 1}번째 교육</p>
                 <p className="mt-1 text-lg font-semibold text-brand-900">{item.title}</p>
                 <p className="mt-2 text-sm leading-6 text-slate-500">
@@ -281,7 +281,7 @@ function AttendanceConfirmScreen({
           {isGroup ? `위 ${events.length}개 교육에 출석하시겠습니까?` : "위 교육에 출석하시겠습니까?"}
         </p>
 
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid gap-3">
           <button type="button" onClick={onContinue} className="btn-primary">
             출석하기
           </button>
@@ -296,10 +296,10 @@ function AttendanceConfirmScreen({
 
 function StaffBox({ staff, onLookup }: { staff: StaffSession | null; onLookup: () => void }) {
   return (
-    <div className="rounded-[24px] border border-slateblue-100 bg-slateblue-50/70 p-5">
+    <div className="rounded-[28px] border border-slateblue-100 bg-gradient-to-br from-white to-slateblue-50 p-5 shadow-[0_12px_30px_rgba(23,59,115,0.04)]">
       {staff ? (
         <div className="flex items-center gap-3">
-          <div className="flex size-12 items-center justify-center rounded-full bg-white text-brand-900 shadow-soft">
+          <div className="flex size-14 items-center justify-center rounded-[22px] bg-white text-brand-900 shadow-soft">
             <UserRound size={22} />
           </div>
           <div>
@@ -348,15 +348,15 @@ function SignatureScreen({
   };
 
   return (
-    <section className="quiet-card animate-soft-in overflow-hidden">
+    <section className="app-card animate-soft-in overflow-hidden">
       <div className="p-5 pb-0 sm:p-6 sm:pb-0">
       <button type="button" onClick={onBack} className="mb-5 inline-flex items-center gap-2 text-sm font-semibold text-brand-900">
         <ArrowLeft size={17} />
         이전으로
       </button>
 
-      <div>
-        <p className="text-sm font-semibold text-brand-600">전자서명 안내</p>
+      <div className="rounded-[26px] border border-softpurple-100 bg-gradient-to-br from-white to-softpurple-50 p-5">
+        <p className="text-sm font-semibold text-[#5E4BE8]">전자서명 안내</p>
         <h2 className="mt-2 text-3xl font-semibold text-brand-900">전자서명</h2>
         <p className="mt-3 text-sm leading-7 text-slate-600">
           연수 증빙용으로 사용됩니다. {isGroup ? `서명 한 번으로 ${eventCount}개 교육에 같은 서명이 연결됩니다.` : "아래 영역에 서명해주세요."}
@@ -377,7 +377,7 @@ function SignatureScreen({
         </button>
         <button type="button" onClick={onSubmit} disabled={!signature} className="btn-primary min-h-14 shadow-lift">
           <PenLine size={17} />
-          저장
+          서명 완료 및 저장
         </button>
       </div>
     </section>
@@ -386,8 +386,8 @@ function SignatureScreen({
 
 function SavingScreen() {
   return (
-    <section className="quiet-card animate-soft-in p-8 text-center">
-      <div className="mx-auto flex size-20 items-center justify-center rounded-full bg-brand-50 text-brand-900">
+    <section className="app-card animate-soft-in p-8 text-center">
+      <div className="mx-auto flex size-20 items-center justify-center rounded-[28px] bg-brand-50 text-brand-900">
         <LoaderCircle size={38} className="animate-spin" />
       </div>
       <h2 className="mt-6 text-2xl font-semibold text-brand-900">출석 정보를 저장하고 있습니다...</h2>
@@ -398,8 +398,8 @@ function SavingScreen() {
 
 function CheckingScreen() {
   return (
-    <section className="quiet-card animate-soft-in p-8 text-center">
-      <div className="mx-auto flex size-20 items-center justify-center rounded-full bg-brand-50 text-brand-900">
+    <section className="app-card animate-soft-in p-8 text-center">
+      <div className="mx-auto flex size-20 items-center justify-center rounded-[28px] bg-brand-50 text-brand-900">
         <LoaderCircle size={38} className="animate-spin" />
       </div>
       <h2 className="mt-6 text-2xl font-semibold text-brand-900">출석 가능 여부를 확인하고 있습니다...</h2>
@@ -434,9 +434,9 @@ function DoneScreen({
       : message;
 
   return (
-    <section className="quiet-card animate-soft-in overflow-hidden text-center">
+    <section className="app-card animate-soft-in overflow-hidden text-center">
       <div className="bg-gradient-to-br from-emerald-50 via-white to-brand-50 px-6 py-8 sm:px-8">
-        <div className="mx-auto flex size-20 animate-[success-pop_0.26s_ease-out] items-center justify-center rounded-full bg-white text-emerald-600 shadow-soft">
+        <div className="mx-auto flex size-20 animate-[success-pop_0.26s_ease-out] items-center justify-center rounded-[28px] bg-white text-emerald-600 shadow-soft">
           <CheckCircle2 size={42} strokeWidth={2.3} />
         </div>
         <h2 className="mt-6 text-[1.65rem] font-semibold leading-tight text-brand-900 sm:text-3xl">{title}</h2>
@@ -468,14 +468,14 @@ function DoneScreen({
                   : "bg-rose-50 text-rose-700 ring-rose-100";
 
             return (
-              <div key={event.eventId} className="rounded-[24px] border border-slateblue-100 bg-slateblue-50/70 p-4">
+              <div key={event.eventId} className="rounded-[26px] border border-slateblue-100 bg-gradient-to-br from-white to-slateblue-50 p-4 shadow-[0_10px_28px_rgba(23,59,115,0.04)]">
                 <div className="flex items-start gap-3">
                   <span className={`mt-0.5 inline-flex shrink-0 items-center gap-1 rounded-full px-3 py-1 text-xs font-bold ring-1 ${statusClass}`}>
                     <CheckCircle2 size={14} />
                     {statusLabel}
                   </span>
                   <div className="min-w-0 flex-1">
-                    <h3 className="text-lg font-extrabold leading-snug text-brand-900">{event.title}</h3>
+                    <h3 className="text-lg font-semibold leading-snug text-brand-900">{event.title}</h3>
                     <div className="mt-3 grid gap-2 text-sm font-medium text-slate-600">
                       <EventMeta icon={<CalendarDays size={16} />} value={event.date} />
                       <EventMeta icon={<Clock3 size={16} />} value={event.time} />
@@ -561,7 +561,7 @@ function formatAttendanceTime(value?: string) {
 
 function InfoRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-2xl bg-white p-4">
+    <div className="rounded-[22px] bg-white p-4 shadow-[0_8px_20px_rgba(23,59,115,0.035)]">
       <p className="text-xs font-medium text-slate-500">{label}</p>
       <p className="mt-1 font-semibold text-brand-900">{value}</p>
     </div>
@@ -657,10 +657,10 @@ function SignaturePad({ onChange }: { onChange: (value: string) => void }) {
 
   return (
     <div className="select-none overscroll-contain">
-      <div className="rounded-[24px] border border-slateblue-100 bg-white p-3 shadow-inner">
+      <div className="rounded-[30px] border border-slateblue-100 bg-white p-3 shadow-[inset_0_2px_10px_rgba(23,59,115,0.035),0_18px_44px_rgba(23,59,115,0.055)]">
         <canvas
           ref={canvasRef}
-          className="h-64 w-full touch-none select-none overscroll-contain rounded-[18px] bg-white sm:h-80"
+          className="h-[360px] w-full touch-none select-none overscroll-contain rounded-[24px] bg-white sm:h-80"
           style={{
             touchAction: "none",
             overscrollBehavior: "contain",

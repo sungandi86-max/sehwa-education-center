@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { ArrowRight, Bell, FileUp, QrCode, ShieldCheck, UserRound } from "lucide-react";
-import { HomeHeroKpi } from "@/components/home-mobile-dashboard";
 import { appsScriptClient, type NoticeRow } from "@/lib/api/appsScriptClient";
 
 const noticeDate = (notice: NoticeRow) => notice.공지일 ?? notice.노출시작일 ?? "";
@@ -45,12 +44,12 @@ export default async function PortalHomePage() {
   ];
 
   return (
-    <div className="mx-auto max-w-6xl">
-      <div className="rounded-[32px] border border-white/80 bg-white/72 p-3 shadow-[0_28px_90px_rgba(23,59,115,0.10)] backdrop-blur md:rounded-[36px] md:p-5">
-        <div className="space-y-6 rounded-[28px] border border-slateblue-100/80 bg-gradient-to-b from-white to-[#FBFCFF] p-4 md:space-y-7 md:rounded-[32px] md:p-7">
-          <section className="rounded-[22px] border border-slateblue-100 bg-white/88 px-4 py-3 shadow-[0_12px_34px_rgba(23,59,115,0.055)] md:rounded-[24px] md:px-5">
+    <div className="mx-auto max-w-5xl">
+      <div className="app-panel">
+        <div className="app-panel-inner space-y-4 md:space-y-5">
+          <section className="rounded-[22px] border border-slateblue-100 bg-white/88 px-3.5 py-2.5 shadow-[0_10px_28px_rgba(23,59,115,0.045)] md:rounded-[24px] md:px-5 md:py-3">
             <div className="flex min-w-0 items-center gap-3">
-              <p className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-[#F2EEFF] px-3 py-1.5 text-xs font-semibold text-[#5E4BE8]">
+              <p className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-[#F2EEFF] px-2.5 py-1 text-[11px] font-semibold text-[#5E4BE8] md:px-3 md:py-1.5 md:text-xs">
                 <Bell size={14} />
                 공지
               </p>
@@ -66,17 +65,15 @@ export default async function PortalHomePage() {
             </div>
           </section>
 
-          <HomeHeroKpi />
-
-          <section className="grid gap-4 md:grid-cols-3 md:gap-6">
+          <section className="grid gap-3 md:grid-cols-3 md:gap-5">
             {portalCards.map((card) => (
               <PortalCard key={card.href} {...card} />
             ))}
           </section>
 
-          <section className="flex items-center gap-4 rounded-[26px] border border-slateblue-100 bg-white/86 px-5 py-4 text-sm leading-6 text-slate-500 shadow-[0_14px_38px_rgba(23,59,115,0.055)] md:rounded-[28px] md:px-6 md:py-5">
-            <div className="flex size-[52px] shrink-0 items-center justify-center rounded-[20px] bg-gradient-to-br from-[#E9FFF5] to-[#DDF5EA] text-[#18A866] shadow-[0_12px_28px_rgba(24,168,102,0.16)]">
-              <ShieldCheck size={27} strokeWidth={1.85} />
+          <section className="flex items-start gap-3 rounded-[24px] border border-slateblue-100 bg-white/86 px-4 py-3.5 text-sm leading-6 text-slate-500 shadow-[0_12px_30px_rgba(23,59,115,0.045)] md:items-center md:rounded-[28px] md:px-6 md:py-5">
+            <div className="flex size-11 shrink-0 items-center justify-center rounded-[18px] bg-gradient-to-br from-[#E9FFF5] to-[#DDF5EA] text-[#18A866] shadow-[0_12px_28px_rgba(24,168,102,0.16)] md:size-[52px] md:rounded-[20px]">
+              <ShieldCheck size={24} strokeWidth={1.85} />
             </div>
             <div>
               <p className="text-base font-semibold tracking-tight text-brand-900">안전하게 저장됩니다.</p>
@@ -111,22 +108,22 @@ function PortalCard({
   return (
     <Link
       href={href}
-      className={`group relative flex min-h-[190px] overflow-hidden rounded-[30px] border border-slateblue-100 bg-gradient-to-br ${surface} p-6 shadow-[0_22px_64px_rgba(23,59,115,0.085),0_4px_16px_rgba(23,59,115,0.04)] transition duration-[250ms] ease-out hover:-translate-y-1 hover:border-brand-900 hover:shadow-[0_28px_80px_rgba(23,59,115,0.13),0_6px_20px_rgba(23,59,115,0.06)] md:min-h-[282px] md:rounded-[32px] md:p-7`}
+      className={`group relative flex min-h-[142px] overflow-hidden rounded-[28px] border border-slateblue-100 bg-gradient-to-br ${surface} p-5 shadow-[0_18px_48px_rgba(23,59,115,0.075),0_4px_14px_rgba(23,59,115,0.035)] transition duration-[250ms] ease-out hover:-translate-y-1 hover:border-brand-900 hover:shadow-[0_28px_80px_rgba(23,59,115,0.13),0_6px_20px_rgba(23,59,115,0.06)] md:min-h-[236px] md:rounded-[32px] md:p-7`}
     >
-      <div className="flex w-full flex-col">
-        <div className={`flex size-16 shrink-0 items-center justify-center rounded-[22px] bg-gradient-to-br ${iconTone} text-white shadow-[0_18px_34px_rgba(23,59,115,0.18)] ring-1 ring-white/80`}>
-          <Icon size={33} strokeWidth={1.75} />
+      <div className="grid w-full grid-cols-[52px_1fr_24px] items-center gap-4 md:flex md:flex-col md:items-stretch">
+        <div className={`flex size-[52px] shrink-0 items-center justify-center rounded-[20px] bg-gradient-to-br ${iconTone} text-white shadow-[0_16px_30px_rgba(23,59,115,0.16)] ring-1 ring-white/80 md:size-16 md:rounded-[22px]`}>
+          <Icon size={28} strokeWidth={1.75} className="md:size-[33px]" />
         </div>
 
-        <div className="mt-7 min-w-0 flex-1">
-          <h2 className="text-[1.7rem] font-semibold leading-tight tracking-tight text-brand-900 md:text-[2rem]">{title}</h2>
-          <p className="mt-3 max-w-[16rem] text-[15px] font-medium leading-7 text-slate-600">
+        <div className="min-w-0 md:mt-7 md:flex-1">
+          <h2 className="text-xl font-semibold leading-tight tracking-tight text-brand-900 md:text-[2rem]">{title}</h2>
+          <p className="mt-1.5 max-w-[16rem] text-sm font-medium leading-6 text-slate-600 md:mt-3 md:text-[15px] md:leading-7">
             {description}
           </p>
         </div>
 
-        <div className="mt-8 flex items-center justify-between">
-          <p className={`text-[15px] font-semibold ${actionTone}`}>{action}</p>
+        <div className="flex items-center justify-end md:mt-8 md:justify-between">
+          <p className={`hidden text-[15px] font-semibold md:block ${actionTone}`}>{action}</p>
           <ArrowRight className={`transition duration-[250ms] ease-out group-hover:translate-x-1 ${actionTone}`} size={25} />
         </div>
       </div>

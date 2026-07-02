@@ -209,10 +209,10 @@ export function CertificateUploadClient({ events }: { events: TrainingEventRow[]
     return (
       <Panel>
         <div className="py-8 text-center">
-          <div className="mx-auto flex size-16 items-center justify-center rounded-[24px] bg-emerald-50 text-emerald-700">
+          <div className="mx-auto flex size-20 items-center justify-center rounded-[28px] bg-gradient-to-br from-[#E9FFF5] to-[#DDF5EA] text-emerald-700 shadow-[0_18px_42px_rgba(24,168,102,0.18)]">
             <CheckCircle2 size={34} />
           </div>
-          <h2 className="mt-5 text-2xl font-extrabold text-brand-900">이수증 제출이 완료되었습니다.</h2>
+          <h2 className="mt-5 text-[1.7rem] font-semibold text-brand-900">이수증 제출이 완료되었습니다.</h2>
           <p className="mt-3 text-sm font-semibold text-slate-600">상태: 제출완료</p>
           {completed.uploadId ? <p className="mt-1 text-xs font-semibold text-slate-400">접수번호: {completed.uploadId}</p> : null}
           <p className="mt-5 text-sm leading-7 text-slate-500">담당자가 확인 후 승인/반려 처리합니다.</p>
@@ -231,18 +231,24 @@ export function CertificateUploadClient({ events }: { events: TrainingEventRow[]
 
   return (
     <>
-      <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
+      <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
         <Panel title="이수증 제출">
+          <div className="mb-5 grid grid-cols-3 gap-2 text-center text-xs font-semibold text-slate-500">
+            <StepChip active label="파일 선택" />
+            <StepChip active={Boolean(extraction) || isExtracting} label="AI 확인" />
+            <StepChip active={Boolean(completed) || isSubmitting} label="제출 완료" />
+          </div>
+
           {!staff ? (
-            <div className="mb-5 rounded-[22px] border border-brand-100 bg-brand-50 p-4 text-sm leading-7 text-brand-900">
+            <div className="mb-5 rounded-[26px] border border-brand-100 bg-gradient-to-br from-white to-brand-50 p-5 text-sm leading-7 text-brand-900">
               본인 확인 후 이수증을 제출할 수 있습니다.
               <button type="button" onClick={() => setIsLookupOpen(true)} className="btn-primary mt-4 w-full sm:w-auto">
                 교직원 조회
               </button>
             </div>
           ) : (
-            <div className="mb-5 rounded-[22px] border border-brand-100 bg-gradient-to-r from-brand-50 to-softpurple-50 p-4 text-sm">
-              <p className="font-extrabold text-brand-900">{staff.staffName} 선생님</p>
+            <div className="mb-5 rounded-[26px] border border-brand-100 bg-gradient-to-br from-white via-brand-50 to-softpurple-50 p-5 text-sm">
+              <p className="font-semibold text-brand-900">{staff.staffName} 선생님</p>
               <p className="mt-1 font-semibold text-slate-600">
                 {staff.department}
                 {staff.staffId ? ` · ${staff.staffId}` : ""}
@@ -276,7 +282,7 @@ export function CertificateUploadClient({ events }: { events: TrainingEventRow[]
                 type="file"
                 accept=".pdf,.png,.jpg,.jpeg"
                 onChange={(event) => void handleFileChange(event.target.files?.[0] ?? null)}
-                className="input-soft font-normal file:mr-4 file:rounded-xl file:border-0 file:bg-brand-50 file:px-4 file:py-2 file:font-bold file:text-brand-900"
+                className="input-soft font-normal file:mr-4 file:rounded-[14px] file:border-0 file:bg-brand-50 file:px-4 file:py-2 file:font-semibold file:text-brand-900"
               />
             </label>
 
@@ -284,15 +290,15 @@ export function CertificateUploadClient({ events }: { events: TrainingEventRow[]
             {error ? <p className="rounded-2xl bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700">{error}</p> : null}
 
             {isExtracting ? (
-              <div className="rounded-[22px] border border-brand-100 bg-brand-50 p-4 text-sm font-semibold text-brand-900">
+              <div className="rounded-[26px] border border-brand-100 bg-gradient-to-br from-white to-brand-50 p-5 text-sm font-semibold text-brand-900">
                 <LoaderCircle className="mr-2 inline animate-spin" size={17} />
-                AI 추출 결과를 준비하고 있습니다.
+                AI가 이수증 정보를 확인 중입니다.
               </div>
             ) : extraction ? (
               <AiExtractionPanel extraction={extraction} fallbackTitle={selectedEvent?.제목 ?? ""} fallbackName={staff?.staffName ?? ""} />
             ) : (
-              <div className="rounded-[22px] border border-brand-100 bg-gradient-to-r from-brand-50 to-softpurple-50 p-4 text-sm leading-7 text-slate-700">
-                <div className="mb-2 flex items-center gap-2 font-extrabold text-brand-900">
+              <div className="rounded-[26px] border border-brand-100 bg-gradient-to-br from-white via-brand-50 to-softpurple-50 p-5 text-sm leading-7 text-slate-700">
+                <div className="mb-2 flex items-center gap-2 font-semibold text-brand-900">
                   <Sparkles size={18} />
                   파일 선택 후 AI 추출 결과를 확인합니다
                 </div>
@@ -348,8 +354,8 @@ function AiExtractionPanel({
   fallbackName: string;
 }) {
   return (
-    <div className="rounded-[22px] border border-slateblue-100 bg-slateblue-50/70 p-4">
-      <p className="mb-4 font-extrabold text-brand-900">AI 추출 결과 확인</p>
+    <div className="rounded-[26px] border border-slateblue-100 bg-gradient-to-br from-white to-slateblue-50 p-5 shadow-[0_12px_30px_rgba(23,59,115,0.045)]">
+      <p className="mb-4 font-semibold text-brand-900">AI 추출 결과 확인</p>
       <div className="grid gap-3 text-sm md:grid-cols-2">
         <AiField label="이수증 번호" value={extraction.certificateNumber ?? "확인 필요"} />
         <AiField label="연수명" value={extraction.trainingTitle ?? fallbackTitle} />
@@ -371,10 +377,10 @@ function UploadStatusCard({ upload, trainingTitle }: { upload: CertificateUpload
   const fileLink = upload.파일링크 ?? upload.파일URL;
 
   return (
-    <div className="rounded-[22px] border border-slateblue-100 bg-slateblue-50/70 p-5 transition hover:bg-white">
+    <div className="rounded-[26px] border border-slateblue-100 bg-gradient-to-br from-white to-slateblue-50 p-5 shadow-[0_12px_32px_rgba(23,59,115,0.045)] transition hover:-translate-y-1 hover:border-brand-900 hover:bg-white">
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
-          <p className="font-extrabold text-brand-900">{submittedTrainingTitle}</p>
+          <p className="font-semibold text-brand-900">{submittedTrainingTitle}</p>
           <p className="mt-1 text-sm text-slate-500">
             {upload.파일명} · {formatSimpleDate(upload.업로드일시)}
           </p>
@@ -401,12 +407,20 @@ function UploadStatusCard({ upload, trainingTitle }: { upload: CertificateUpload
 
 function AiField({ label, value, icon }: { label: string; value: string; icon?: React.ReactNode }) {
   return (
-    <div className="rounded-2xl bg-white p-4">
-      <span className="flex items-center gap-1 text-xs font-bold text-slate-500">
+    <div className="rounded-[22px] bg-white p-4 shadow-[0_8px_20px_rgba(23,59,115,0.035)]">
+      <span className="flex items-center gap-1 text-xs font-semibold text-slate-500">
         {icon}
         {label}
       </span>
-      <p className="mt-2 font-extrabold text-brand-900">{value}</p>
+      <p className="mt-2 font-semibold text-brand-900">{value}</p>
+    </div>
+  );
+}
+
+function StepChip({ label, active }: { label: string; active: boolean }) {
+  return (
+    <div className={`rounded-full px-3 py-2 ${active ? "bg-brand-50 text-brand-900 ring-1 ring-brand-100" : "bg-slateblue-50 text-slate-400"}`}>
+      {label}
     </div>
   );
 }

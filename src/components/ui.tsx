@@ -44,14 +44,14 @@ export function PageHeader({
   action?: React.ReactNode;
 }) {
   return (
-    <div className="mb-8 flex flex-col gap-5 md:flex-row md:items-end md:justify-between print:hidden">
+    <div className="mb-6 flex flex-col gap-5 md:flex-row md:items-end md:justify-between print:hidden">
       <div>
-        <Link href="/" className="btn-secondary mb-5 w-fit px-4">
+        <Link href="/" className="mb-5 inline-flex items-center gap-2 text-sm font-semibold text-brand-900 transition hover:text-brand-600">
           <ArrowLeft size={17} />
-          홈으로
+          뒤로가기
         </Link>
-        <h2 className="text-3xl font-extrabold tracking-tight text-brand-900 md:text-4xl">{title}</h2>
-        {description ? <p className="mt-3 max-w-2xl text-base leading-7 text-slate-600">{description}</p> : null}
+        <h2 className="text-[2rem] font-semibold tracking-tight text-brand-900 md:text-4xl">{title}</h2>
+        {description ? <p className="mt-3 max-w-2xl text-[15px] font-medium leading-7 text-slate-500">{description}</p> : null}
       </div>
       {action}
     </div>
@@ -60,9 +60,9 @@ export function PageHeader({
 
 export function StatCard({ label, value, helper }: { label: string; value: string | number; helper?: string }) {
   return (
-    <div className="soft-card p-6">
-      <p className="text-sm font-bold text-slate-500">{label}</p>
-      <p className="mt-3 text-3xl font-extrabold text-brand-900">{value}</p>
+    <div className="app-card p-6">
+      <p className="text-sm font-semibold text-slate-500">{label}</p>
+      <p className="mt-3 text-3xl font-semibold text-brand-900">{value}</p>
       {helper ? <p className="mt-2 text-sm leading-6 text-slate-500">{helper}</p> : null}
     </div>
   );
@@ -98,17 +98,17 @@ export function SecondaryLink({ href, children }: { href: string; children: Reac
 
 export function Panel({ title, children }: { title?: string; children: React.ReactNode }) {
   return (
-    <section className="quiet-card overflow-hidden">
-      {title ? <div className="border-b border-slateblue-100 px-6 py-5 text-lg font-extrabold text-brand-900">{title}</div> : null}
-      <div className="p-6">{children}</div>
+    <section className="app-card overflow-hidden">
+      {title ? <div className="border-b border-slateblue-100 px-6 py-5 text-lg font-semibold text-brand-900">{title}</div> : null}
+      <div className="p-5 md:p-6">{children}</div>
     </section>
   );
 }
 
 export function EmptyState({ title, description }: { title: string; description: string }) {
   return (
-    <div className="rounded-[22px] border border-dashed border-slateblue-100 bg-white/70 p-8 text-center">
-      <p className="font-bold text-brand-900">{title}</p>
+    <div className="rounded-[26px] border border-dashed border-slateblue-100 bg-white/70 p-8 text-center">
+      <p className="font-semibold text-brand-900">{title}</p>
       <p className="mt-2 text-sm leading-6 text-slate-500">{description}</p>
     </div>
   );
