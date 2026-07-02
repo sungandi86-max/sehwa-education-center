@@ -11,6 +11,10 @@ export interface NoticeRow {
   내용: string;
   공지구분?: string;
   링크?: string;
+  사용여부?: string;
+  홈노출?: string;
+  공지일?: string;
+  노출시작일?: string;
   작성부서?: string;
   작성자?: string;
 }
@@ -30,6 +34,9 @@ const mockNotices: NoticeRow[] = [
     공지구분: "안내",
     제목: "세화 교직원 교육센터 시범 운영 안내",
     내용: "QR 출석, 내 이수 확인, 이수증 업로드 기능을 시범 운영합니다.",
+    사용여부: "사용",
+    홈노출: "사용",
+    공지일: "2026-07-01",
     작성부서: "교육센터"
   }
 ];
@@ -167,6 +174,10 @@ export const appsScriptClient = {
       제목: asString(row.제목, "공지사항"),
       내용: asString(row.내용),
       링크: asString(row.링크),
+      사용여부: asString(row.사용여부, "사용"),
+      홈노출: asString(row.홈노출, "사용"),
+      공지일: asString(row.공지일 ?? row.노출시작일),
+      노출시작일: asString(row.노출시작일),
       작성부서: asString(row.작성부서),
       작성자: asString(row.작성자)
     }));

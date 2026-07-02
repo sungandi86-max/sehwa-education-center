@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { createContext, useContext, useMemo, useState } from "react";
 
 export interface StaffSession {
@@ -19,18 +20,82 @@ interface StaffSessionContextValue {
 const StaffSessionContext = createContext<StaffSessionContextValue | undefined>(undefined);
 
 export function StaffSessionProvider({ children }: { children: React.ReactNode }) {
-  const [staff, setStaffState] = useState<StaffSession | null>(null);
+  const [staff, setStaffState] = useState<StaffSession | null>(() => {
+    if (typeof window === "undefined") {
+      return null;
+    }
+
+    const saved = window.sessionStorage.getItem("sehwa-staff-session");
+    return saved ? (JSON.parse(saved) as StaffSession) : null;
+  });
+
+  const setStaff = (nextStaff: StaffSession) => {
+    setStaffState(nextStaff);
+    window.sessionStorage.setItem("sehwa-staff-session", JSON.stringify(nextStaff));
+  };
+
+  const clearStaff = () => {
+    setStaffState(null);
+    window.sessionStorage.removeItem("sehwa-staff-session");
+  };
 
   const value = useMemo<StaffSessionContextValue>(
     () => ({
       staff,
-      setStaff: setStaffState,
-      clearStaff: () => setStaffState(null)
+      setStaff,
+      clearStaff
     }),
     [staff]
   );
 
   return <StaffSessionContext.Provider value={value}>{children}</StaffSessionContext.Provider>;
+}
+
+export function HeaderStaffMenu({ onLookup }: { onLookup?: () => void }) {
+  const { staff, clearStaff } = useStaffSession();
+  const [isOpen, setIsOpen] = useState(false);
+
+  if (!staff) {
+    return onLookup ? (
+      <button
+        type="button"
+        onClick={onLookup}
+        className="rounded-md border border-slateblue-900 bg-white px-3 py-2 text-sm font-semibold text-slateblue-900 hover:bg-brand-50"
+      >
+        교직원 조회
+      </button>
+    ) : null;
+  }
+
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setIsOpen((value) => !value)}
+        className="rounded-md border border-teal-100 bg-teal-50 px-3 py-2 text-sm font-bold text-slateblue-900 hover:bg-teal-100"
+      >
+        {staff.staffName} 선생님
+      </button>
+      {isOpen ? (
+        <div className="absolute right-0 z-20 mt-2 w-44 rounded-md border border-slate-200 bg-white p-2 text-sm shadow-lg">
+          <Link href="/my" className="block rounded px-3 py-2 text-slate-700 hover:bg-brand-50">
+            내 교육현황
+          </Link>
+          <button
+            type="button"
+            onClick={() => {
+              setIsOpen(false);
+              clearStaff();
+              onLookup?.();
+            }}
+            className="block w-full rounded px-3 py-2 text-left text-slate-700 hover:bg-brand-50"
+          >
+            다른 사용자 조회
+          </button>
+        </div>
+      ) : null}
+    </div>
+  );
 }
 
 export function useStaffSession() {

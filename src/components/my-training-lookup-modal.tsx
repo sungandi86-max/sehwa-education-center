@@ -49,7 +49,7 @@ export function MyTrainingLookupCard({
   );
 }
 
-function MyTrainingLookupModal({ onClose }: { onClose: () => void }) {
+export function MyTrainingLookupModal({ onClose }: { onClose: () => void }) {
   const { setStaff } = useStaffSession();
   const [staffName, setStaffName] = useState("");
   const [department, setDepartment] = useState("");
