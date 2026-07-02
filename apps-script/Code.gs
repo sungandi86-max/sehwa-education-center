@@ -115,19 +115,115 @@ function appendRow(sheetName, data) {
   sheet.appendRow(row);
 }
 
+const STAFF_ID_KEYS = ["교직원ID", "교직원Id", "교직원아이디", "교직원번호", "교원번호", "직원번호", "직번", "교번", "사번", "ID", "id", "staffId", "staff_id", "teacherId", "teacher_id", "사용자ID", "사용자아이디", "식별번호"];
+const STAFF_NAME_KEYS = ["성명", "이름", "성함", "교직원명", "교사명", "직원명", "이름(성명)", "name", "staffName", "teacherName"];
+const DEPARTMENT_KEYS = ["소속부서", "소속 부서", "부서", "부서명", "소속", "소속부", "담당부서", "근무부서", "department", "dept"];
+const POSITION_KEYS = ["직책", "직위", "직급", "직종", "직무", "구분", "교직원구분", "교원구분", "역할", "position", "role", "title"];
+const SUBMISSION_TARGET_KEYS = ["제출대상", "제출 대상", "제출대상여부", "제출 여부", "교육제출대상", "교육대상여부", "연수대상", "연수대상여부", "이수대상", "이수대상여부", "대상여부", "대상자여부", "targetSubmission", "submissionTarget"];
+const STAFF_STATUS_KEYS = ["재직상태", "재직 여부", "근무상태", "근무 여부", "상태", "status"];
+
+function normalizeHeaderKey(value) {
+  return String(value || "")
+    .replace(/[\s_\-()[\]{}\/\\.·:：]/g, "")
+    .toLowerCase();
+}
+
+function uniqueKeys(keys) {
+  const seen = {};
+  return keys.filter((key) => {
+    const normalized = normalizeHeaderKey(key);
+    if (!normalized || seen[normalized]) return false;
+    seen[normalized] = true;
+    return true;
+  });
+}
+
+function aliasesForKeys(keys) {
+  let expanded = keys.slice();
+  const normalized = keys.map(normalizeHeaderKey);
+
+  if (STAFF_ID_KEYS.some((key) => normalized.indexOf(normalizeHeaderKey(key)) >= 0)) expanded = expanded.concat(STAFF_ID_KEYS);
+  if (STAFF_NAME_KEYS.some((key) => normalized.indexOf(normalizeHeaderKey(key)) >= 0)) expanded = expanded.concat(STAFF_NAME_KEYS);
+  if (DEPARTMENT_KEYS.some((key) => normalized.indexOf(normalizeHeaderKey(key)) >= 0)) expanded = expanded.concat(DEPARTMENT_KEYS);
+  if (POSITION_KEYS.some((key) => normalized.indexOf(normalizeHeaderKey(key)) >= 0)) expanded = expanded.concat(POSITION_KEYS);
+  if (SUBMISSION_TARGET_KEYS.some((key) => normalized.indexOf(normalizeHeaderKey(key)) >= 0)) expanded = expanded.concat(SUBMISSION_TARGET_KEYS);
+  if (STAFF_STATUS_KEYS.some((key) => normalized.indexOf(normalizeHeaderKey(key)) >= 0)) expanded = expanded.concat(STAFF_STATUS_KEYS);
+
+  return uniqueKeys(expanded);
+}
+
 function valueOf(row, keys, fallback) {
   if (!row) return fallback || "";
-  for (let i = 0; i < keys.length; i += 1) {
-    const value = row[keys[i]];
+  const candidates = aliasesForKeys(keys);
+
+  for (let i = 0; i < candidates.length; i += 1) {
+    const value = row[candidates[i]];
     if (value !== undefined && value !== null && String(value).trim() !== "") {
       return value;
     }
   }
+
+  const normalizedCandidates = candidates.map(normalizeHeaderKey);
+  const rowKeys = Object.keys(row);
+  for (let i = 0; i < rowKeys.length; i += 1) {
+    const rowKey = rowKeys[i];
+    if (normalizedCandidates.indexOf(normalizeHeaderKey(rowKey)) < 0) continue;
+    const value = row[rowKey];
+    if (value !== undefined && value !== null && String(value).trim() !== "") {
+      return value;
+    }
+  }
+
   return fallback || "";
 }
 
 function stringOf(row, keys, fallback) {
   return String(valueOf(row, keys, fallback || "") || "").trim();
+}
+
+function normalizeStaffRow(row) {
+  if (!row) return null;
+  const normalized = Object.assign({}, row);
+  normalized["교직원ID"] = stringOf(row, STAFF_ID_KEYS);
+  normalized.staffId = normalized["교직원ID"];
+  normalized["성명"] = stringOf(row, STAFF_NAME_KEYS);
+  normalized.staffName = normalized["성명"];
+  normalized["소속부서"] = stringOf(row, DEPARTMENT_KEYS);
+  normalized.department = normalized["소속부서"];
+  normalized["직책"] = stringOf(row, POSITION_KEYS);
+  normalized.position = normalized["직책"];
+  normalized["제출대상"] = stringOf(row, SUBMISSION_TARGET_KEYS);
+  normalized.submissionTarget = normalized["제출대상"];
+  normalized["재직상태"] = stringOf(row, STAFF_STATUS_KEYS, "재직");
+  normalized.staffStatus = normalized["재직상태"];
+  return normalized;
+}
+
+function getStaffRows() {
+  return safeRows(SHEETS.staff)
+    .map(normalizeStaffRow)
+    .filter((row) => row && row["교직원ID"] && row["성명"]);
+}
+
+function normalizeTargetPersonRow(row) {
+  const targetStaffId = stringOf(row, STAFF_ID_KEYS);
+  const staff = targetStaffId ? getStaffById(targetStaffId) : null;
+  const normalizedTarget = normalizeStaffRow(row) || {};
+  const staffId = targetStaffId || stringOf(staff, STAFF_ID_KEYS);
+  const staffName = stringOf(normalizedTarget, STAFF_NAME_KEYS) || stringOf(staff, STAFF_NAME_KEYS);
+  const department = stringOf(normalizedTarget, DEPARTMENT_KEYS) || stringOf(staff, DEPARTMENT_KEYS);
+  const position = stringOf(normalizedTarget, POSITION_KEYS) || stringOf(staff, POSITION_KEYS);
+
+  return Object.assign({}, staff || {}, normalizedTarget, {
+    "교직원ID": staffId,
+    staffId,
+    "성명": staffName,
+    staffName,
+    "소속부서": department,
+    department,
+    "직책": position,
+    position
+  });
 }
 
 function truthy(value) {
@@ -230,14 +326,14 @@ function findStaff(req) {
     return { success: false, message: "성명을 입력해주세요." };
   }
 
-  let rows = safeRows(SHEETS.staff).filter((row) => {
-    const staffId = stringOf(row, ["교직원ID", "staffId", "직원번호"]);
-    const staffName = stringOf(row, ["성명", "name", "staffName"]);
+  let rows = getStaffRows().filter((row) => {
+    const staffId = stringOf(row, STAFF_ID_KEYS);
+    const staffName = stringOf(row, STAFF_NAME_KEYS);
     return staffName === name || staffId === name;
   });
 
   if (department) {
-    rows = rows.filter((row) => stringOf(row, ["소속부서", "부서", "department"]) === department);
+    rows = rows.filter((row) => stringOf(row, DEPARTMENT_KEYS) === department);
   }
 
   return { success: true, data: rows, count: rows.length };
@@ -247,7 +343,7 @@ function getMyTrainingHistory(req) {
   const staffId = String(req.staffId || req.query || "").trim();
   if (!staffId) return { success: false, message: "교직원ID가 필요합니다." };
 
-  const rows = safeRows(SHEETS.history).filter((row) => stringOf(row, ["교직원ID", "staffId", "직원번호"]) === staffId);
+  const rows = safeRows(SHEETS.history).filter((row) => stringOf(row, STAFF_ID_KEYS) === staffId);
   return { success: true, data: rows };
 }
 
@@ -255,7 +351,7 @@ function getMyUploads(req) {
   const staffId = String(req.staffId || req.query || "").trim();
   if (!staffId) return { success: false, message: "교직원ID가 필요합니다." };
 
-  const rows = safeRows(SHEETS.uploads).filter((row) => stringOf(row, ["교직원ID", "staffId", "직원번호"]) === staffId);
+  const rows = safeRows(SHEETS.uploads).filter((row) => stringOf(row, STAFF_ID_KEYS) === staffId);
   return { success: true, data: rows };
 }
 
@@ -445,7 +541,7 @@ function getAttendanceDecision(eventId, staffId) {
   }
 
   const targetRows = getTargetsForEvent(eventId);
-  const target = targetRows.find((row) => stringOf(row, ["교직원ID", "staffId", "직원번호"]) === staffId);
+  const target = targetRows.find((row) => stringOf(row, STAFF_ID_KEYS) === staffId);
   const staff = getStaffById(staffId) || {};
 
   if (!isEligibleTrainingTarget(event, targetRows, target, staff)) {
@@ -475,7 +571,7 @@ function getAttendanceDecision(eventId, staffId) {
   }
 
   const existing = getAttendancesForEvent(eventId).find(
-    (row) => stringOf(row, ["교직원ID", "staffId", "직원번호"]) === staffId
+    (row) => stringOf(row, STAFF_ID_KEYS) === staffId
   );
 
   if (existing) {
@@ -515,9 +611,9 @@ function appendQrAttendance(req, eventId, staffId, signatureRecord) {
     "묶음ID": groupId,
     "교직원ID": staffId,
     staffId,
-    "성명": stringOf(staff, ["성명", "name", "staffName"]) || req.staffName || req.name || "",
-    "소속부서": stringOf(staff, ["소속부서", "부서", "department"]) || req.department || "",
-    "직책": stringOf(staff, ["직책", "직위", "position"]) || req.position || "",
+    "성명": stringOf(staff, STAFF_NAME_KEYS) || req.staffName || req.name || "",
+    "소속부서": stringOf(staff, DEPARTMENT_KEYS) || req.department || "",
+    "직책": stringOf(staff, POSITION_KEYS) || req.position || "",
     "참석일시": now,
     "참석방법": "QR",
     "상태": "출석완료",
@@ -585,10 +681,10 @@ function getAttendanceSummary(req) {
 
   const targets = getTargetsForEvent(eventId);
   const attendanceRows = getAttendancesForEvent(eventId);
-  const people = targets.length > 0 ? targets : safeRows(SHEETS.staff);
+  const people = targets.length > 0 ? targets.map(normalizeTargetPersonRow) : getStaffRows();
   const rows = people.map((person, index) => {
-    const staffId = stringOf(person, ["교직원ID", "staffId", "직원번호"]);
-    const attendance = attendanceRows.find((row) => stringOf(row, ["교직원ID", "staffId", "직원번호"]) === staffId);
+    const staffId = stringOf(person, STAFF_ID_KEYS);
+    const attendance = attendanceRows.find((row) => stringOf(row, STAFF_ID_KEYS) === staffId);
     const excluded = targets.length > 0 && isSignatureExcluded(person);
     const recognized = attendance && stringOf(attendance, ["상태", "status"]).indexOf("인정") >= 0;
     const status = excluded ? "서명제외" : recognized ? "인정완료" : attendance ? "출석완료" : "미출석";
@@ -597,8 +693,8 @@ function getAttendanceSummary(req) {
       no: index + 1,
       eventId,
       staffId,
-      staffName: stringOf(person, ["성명", "name", "staffName"]),
-      department: stringOf(person, ["소속부서", "부서", "department"]),
+      staffName: stringOf(person, STAFF_NAME_KEYS),
+      department: stringOf(person, DEPARTMENT_KEYS),
       targetStatus: targets.length > 0 ? "대상" : "대상확인필요",
       attendanceStatus: status,
       attendedAt: attendance ? valueOf(attendance, ["참석일시", "attendedAt"]) : "",
@@ -761,7 +857,7 @@ function getTrainingByEventId(eventId) {
 }
 
 function getStaffById(staffId) {
-  return safeRows(SHEETS.staff).find((row) => stringOf(row, ["교직원ID", "staffId", "직원번호"]) === String(staffId || "").trim());
+  return getStaffRows().find((row) => stringOf(row, STAFF_ID_KEYS) === String(staffId || "").trim());
 }
 
 function getTargetsForEvent(eventId) {
@@ -779,15 +875,23 @@ function isSignatureExcluded(target) {
   return truthy(direct) || status.indexOf("서명제외") >= 0 || status.indexOf("면제") >= 0;
 }
 
+function isExplicitTrainingTarget(target) {
+  if (!target) return false;
+  const status = stringOf(target, ["대상여부", "대상자여부", "대상상태", "상태", "비고"]);
+  if (status.indexOf("비대상") >= 0 || status.indexOf("미대상") >= 0) return false;
+  return true;
+}
+
 function isEligibleTrainingTarget(event, targetRows, target, staff) {
-  if (target) return true;
+  if (target) return isExplicitTrainingTarget(target);
+  if (!staff || !stringOf(staff, STAFF_ID_KEYS)) return false;
 
   const targetText = stringOf(event, ["대상", "교육대상", "target", "targetAudience"]);
   const normalizedTarget = targetText.replace(/\s/g, "");
-  const department = stringOf(staff, ["소속부서", "부서", "department"]);
-  const position = stringOf(staff, ["직책", "직위", "position"]);
-  const staffStatus = stringOf(staff, ["재직상태", "status"], "재직");
-  const submissionTarget = stringOf(staff, ["제출대상", "교육제출대상", "targetSubmission"], "대상");
+  const department = stringOf(staff, DEPARTMENT_KEYS);
+  const position = stringOf(staff, POSITION_KEYS);
+  const staffStatus = stringOf(staff, STAFF_STATUS_KEYS, "재직");
+  const submissionTarget = stringOf(staff, SUBMISSION_TARGET_KEYS, "대상");
   const isActive = staffStatus !== "퇴직" && staffStatus !== "퇴사";
   const isSubmissionTarget = submissionTarget === "" || submissionTarget === "대상" || submissionTarget.toLowerCase() === "true";
   const isTeacher = position.indexOf("교사") >= 0 || position.indexOf("교원") >= 0 || position.indexOf("보건교사") >= 0 || position.indexOf("기간제") >= 0;
