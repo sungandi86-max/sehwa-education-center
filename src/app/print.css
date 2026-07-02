@@ -29,4 +29,19 @@
     page-break-after: avoid;
     page-break-inside: avoid;
   }
+
+  .print-header {
+    border-bottom: 1px solid #e2e8f0 !important;
+    padding-bottom: 7mm !important;
+  }
+
+  .print-meta {
+    border-bottom: 1px solid #e2e8f0 !important;
+    padding-bottom: 5mm !important;
+  }
+
+  .print-footer {
+    border-top: 1px solid #e2e8f0 !important;
+    padding-top: 6mm !important;
+  }
 }
