@@ -49,19 +49,16 @@ const mockNotices: NoticeRow[] = [
   }
 ];
 
+const APPS_SCRIPT_RETRY_DELAYS = [350, 900];
+
+const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
 const postAppsScript = async <T>(payload: RawRecord): Promise<T> => {
   if (!APPS_SCRIPT_API_URL) {
     throw new Error("NEXT_PUBLIC_APPS_SCRIPT_API_URL is not configured.");
   }
 
-  const response = await fetch(APPS_SCRIPT_API_URL, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify(payload),
-    cache: "no-store"
-  });
+  const response = await fetchAppsScriptWithRetry(payload);
 
   if (!response.ok) {
     throw new Error(`Apps Script request failed: ${response.status}`);
@@ -81,14 +78,7 @@ const postAppsScriptEnvelope = async <T>(payload: RawRecord): Promise<AppsScript
     throw new Error("NEXT_PUBLIC_APPS_SCRIPT_API_URL is not configured.");
   }
 
-  const response = await fetch(APPS_SCRIPT_API_URL, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify(payload),
-    cache: "no-store"
-  });
+  const response = await fetchAppsScriptWithRetry(payload);
 
   if (!response.ok) {
     throw new Error(`Apps Script request failed: ${response.status}`);
@@ -96,6 +86,35 @@ const postAppsScriptEnvelope = async <T>(payload: RawRecord): Promise<AppsScript
 
   return response.json() as Promise<AppsScriptResponse<T>>;
 };
+
+async function fetchAppsScriptWithRetry(payload: RawRecord) {
+  let lastResponse: Response | undefined;
+  const apiUrl = APPS_SCRIPT_API_URL as string;
+
+  for (let attempt = 0; attempt <= APPS_SCRIPT_RETRY_DELAYS.length; attempt += 1) {
+    const response = await fetch(apiUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(payload),
+      cache: "no-store"
+    });
+
+    if (response.ok || (response.status < 500 && response.status !== 404)) {
+      return response;
+    }
+
+    lastResponse = response;
+    const delay = APPS_SCRIPT_RETRY_DELAYS[attempt];
+
+    if (delay) {
+      await wait(delay);
+    }
+  }
+
+  return lastResponse as Response;
+}
 
 const asString = (value: unknown, fallback = "") => (value == null ? fallback : String(value));
 

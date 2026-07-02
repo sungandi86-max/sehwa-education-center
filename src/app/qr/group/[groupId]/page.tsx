@@ -30,7 +30,11 @@ const toQrEvent = (event: TrainingEventRow): QrAttendanceEventInfo => ({
 
 export default async function GroupQrAttendancePage({ params }: { params: Promise<{ groupId: string }> }) {
   const { groupId } = await params;
-  const events = await appsScriptClient.getGroupTrainings(groupId);
+  const events = await appsScriptClient.getGroupTrainings(groupId).catch(() => null);
+
+  if (!events) {
+    return <GroupQrLoadError />;
+  }
 
   if (events.length === 0) {
     notFound();
@@ -40,6 +44,18 @@ export default async function GroupQrAttendancePage({ params }: { params: Promis
     <div className="mx-auto max-w-2xl space-y-8">
       <PageHeader title="묶음 QR 출석" description="한 번의 본인 확인과 전자서명으로 여러 교육 출석을 처리합니다." />
       <QrAttendanceConfirm groupId={groupId} events={events.map(toQrEvent)} />
+    </div>
+  );
+}
+
+function GroupQrLoadError() {
+  return (
+    <div className="mx-auto max-w-2xl space-y-8">
+      <PageHeader title="묶음 QR 출석" description="한 번의 본인 확인과 전자서명으로 여러 교육 출석을 처리합니다." />
+      <section className="quiet-card p-6 text-center">
+        <h1 className="text-2xl font-semibold text-brand-900">정보를 불러오지 못했습니다.</h1>
+        <p className="mt-3 text-sm leading-7 text-slate-600">잠시 후 다시 시도해주세요. 계속 문제가 있으면 교육 담당자에게 문의해주세요.</p>
+      </section>
     </div>
   );
 }
