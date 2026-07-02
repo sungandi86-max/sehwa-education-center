@@ -19,12 +19,13 @@ type FlowStep = "confirm" | "signature" | "saving" | "done";
 
 interface AttendanceResult {
   message?: string;
-  status?: "completed" | "already";
+  status?: "completed" | "already" | "notTarget" | "excluded" | "notFound";
   completedCount?: number;
   skippedCount?: number;
+  blockedCount?: number;
   results?: {
     eventId?: string;
-    status?: "completed" | "already";
+    status?: "completed" | "already" | "notTarget" | "excluded" | "notFound";
     message?: string;
   }[];
 }
@@ -307,8 +308,9 @@ function DoneScreen({
   message: string;
   result: AttendanceResult | null;
 }) {
-  const completedCount = result?.completedCount ?? (result?.status === "already" ? 0 : events.length === 1 ? 1 : 0);
+  const completedCount = result?.completedCount ?? (result?.status === "completed" ? 1 : 0);
   const skippedCount = result?.skippedCount ?? (result?.status === "already" ? 1 : 0);
+  const blockedCount = result?.blockedCount ?? (result?.status === "notTarget" || result?.status === "excluded" || result?.status === "notFound" ? 1 : 0);
   const resultByEventId = new Map((result?.results ?? []).map((item) => [item.eventId, item]));
 
   return (
@@ -326,9 +328,10 @@ function DoneScreen({
       </div>
 
       <div className="p-6">
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid gap-3 sm:grid-cols-3">
           <ResultCount label="완료" value={completedCount} tone="text-emerald-700" />
           <ResultCount label="이미 출석" value={skippedCount} tone="text-amber-700" />
+          <ResultCount label="처리 불가" value={blockedCount} tone="text-rose-700" />
         </div>
 
         <div className="mt-5 space-y-3 text-left">
@@ -337,7 +340,11 @@ function DoneScreen({
             const status = eventResult?.status ?? result?.status;
             const statusLabel = status === "already" ? "이미 출석" : status === "completed" ? "완료" : "처리됨";
             const statusClass =
-              status === "already" ? "bg-amber-50 text-amber-700 ring-amber-100" : "bg-emerald-50 text-emerald-700 ring-emerald-100";
+              status === "already"
+                ? "bg-amber-50 text-amber-700 ring-amber-100"
+                : status === "completed"
+                  ? "bg-emerald-50 text-emerald-700 ring-emerald-100"
+                  : "bg-rose-50 text-rose-700 ring-rose-100";
 
             return (
               <div key={event.eventId} className="rounded-[22px] border border-slateblue-100 bg-slateblue-50/70 p-4">

@@ -339,8 +339,9 @@ function getAttendanceDecision(eventId, staffId) {
 
   const targetRows = getTargetsForEvent(eventId);
   const target = targetRows.find((row) => stringOf(row, ["교직원ID", "staffId", "직원번호"]) === staffId);
+  const staff = getStaffById(staffId) || {};
 
-  if (targetRows.length > 0 && !target) {
+  if (!isEligibleTrainingTarget(event, targetRows, target, staff)) {
     return {
       eventId,
       status: "notTarget",
@@ -670,6 +671,26 @@ function isSignatureExcluded(target) {
   const direct = valueOf(target, ["서명제외", "서명제외여부", "signatureExcluded", "제외여부"]);
   const status = stringOf(target, ["상태", "대상상태", "예외사유", "비고"]);
   return truthy(direct) || status.indexOf("서명제외") >= 0 || status.indexOf("면제") >= 0;
+}
+
+function isEligibleTrainingTarget(event, targetRows, target, staff) {
+  if (target) return true;
+
+  const targetText = stringOf(event, ["대상", "교육대상", "target", "targetAudience"]);
+  const normalizedTarget = targetText.replace(/\s/g, "");
+  const department = stringOf(staff, ["소속부서", "부서", "department"]);
+  const position = stringOf(staff, ["직책", "직위", "position"]);
+  const staffStatus = stringOf(staff, ["재직상태", "status"], "재직");
+
+  if (!targetText && targetRows.length === 0) return true;
+  if (normalizedTarget.indexOf("전교직원") >= 0 || normalizedTarget.indexOf("전체") >= 0 || normalizedTarget.toLowerCase() === "all") {
+    return staffStatus !== "퇴직";
+  }
+  if (targetText.indexOf("교직원") >= 0) return staffStatus !== "퇴직";
+  if (targetText.indexOf("교사") >= 0 && position.indexOf("교사") >= 0) return true;
+  if (department && targetText.indexOf(department) >= 0) return true;
+
+  return targetRows.length === 0;
 }
 
 function getDriveRootFolder() {

@@ -765,6 +765,7 @@ async function submitGroupQrAttendanceToAppsScript(input: SubmitQrAttendanceInpu
     : [];
   const completedCount = Number(data.completedCount ?? results.filter((item) => item.status === "completed").length);
   const skippedCount = Number(data.skippedCount ?? results.filter((item) => item.status === "already").length);
+  const blockedCount = Number(data.blockedCount ?? results.filter((item) => item.status === "notTarget" || item.status === "excluded").length);
   const message = result.message ?? `출석 완료 ${completedCount}건, 이미 출석 처리 ${skippedCount}건`;
 
   if (!result.success) {
@@ -772,6 +773,7 @@ async function submitGroupQrAttendanceToAppsScript(input: SubmitQrAttendanceInpu
       ok: false,
       completedCount: 0,
       skippedCount: 0,
+      blockedCount,
       results,
       message
     };
@@ -781,6 +783,7 @@ async function submitGroupQrAttendanceToAppsScript(input: SubmitQrAttendanceInpu
     ok: true,
     completedCount,
     skippedCount,
+    blockedCount,
     results,
     message
   };
@@ -825,18 +828,26 @@ function createQrAttendancePayload(input: SubmitQrAttendanceInput): RawRecord {
 
 function normalizeAttendanceResult(row: RawRecord, fallbackEventId = "", fallbackMessage = "QR 출석이 기록되었습니다."): SubmitAttendanceResult {
   const message = asString(row.message, fallbackMessage);
+  const rawStatus = asString(row.status) || asString(row.상태);
   const already =
-    asString(row.status) === "already" ||
-    asString(row.상태) === "already" ||
-    asString(row.상태) === "중복" ||
+    rawStatus === "already" ||
+    rawStatus === "중복" ||
     message.includes("이미") ||
     message.toLowerCase().includes("already");
+  const blockedStatus =
+    rawStatus === "notTarget" || rawStatus === "excluded" || rawStatus === "notFound"
+      ? (rawStatus as SubmitAttendanceResult["status"])
+      : undefined;
+  const status = blockedStatus ?? (already ? "already" : "completed");
 
   return {
     ok: asString(row.ok, "true") !== "false",
     eventId: asString(row.eventId, fallbackEventId),
     attendanceId: asString(row.attendanceId),
-    status: already ? "already" : "completed",
+    status,
+    completedCount: Number(row.completedCount ?? (status === "completed" ? 1 : 0)),
+    skippedCount: Number(row.skippedCount ?? (status === "already" ? 1 : 0)),
+    blockedCount: Number(row.blockedCount ?? (status === "notTarget" || status === "excluded" || status === "notFound" ? 1 : 0)),
     signatureId: asString(row.signatureId),
     signatureFileId: asString(row.signatureFileId),
     signatureImageUrl: asString(row.signatureImageUrl),

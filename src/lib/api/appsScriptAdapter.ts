@@ -62,6 +62,9 @@ export interface SubmitAttendanceResult {
   message: string;
   status?: "completed" | "already" | "notTarget" | "excluded" | "notFound";
   eventId?: string;
+  completedCount?: number;
+  skippedCount?: number;
+  blockedCount?: number;
   signatureId?: string;
   signatureFileId?: string;
   signatureImageUrl?: string;
@@ -72,6 +75,7 @@ export interface SubmitGroupAttendanceResult {
   message: string;
   completedCount: number;
   skippedCount: number;
+  blockedCount?: number;
   results: SubmitAttendanceResult[];
 }
 
