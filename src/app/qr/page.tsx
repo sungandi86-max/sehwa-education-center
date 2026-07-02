@@ -16,7 +16,7 @@ export default async function QrPortalPage() {
 
       <div className="grid gap-4">
         {availableEvents.map((event) => (
-          <Link key={event.eventId} href={`/trainings/${event.eventId}/qr`} className="group block rounded-md border border-slate-200 bg-white p-5 shadow-soft hover:border-brand-200 hover:bg-brand-50">
+          <Link key={event.eventId} href={`/qr/${event.eventId}`} className="group block rounded-md border border-slate-200 bg-white p-5 shadow-soft hover:border-brand-200 hover:bg-brand-50">
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
               <div className="min-w-0">
                 <div className="mb-2 flex flex-wrap items-center gap-2">

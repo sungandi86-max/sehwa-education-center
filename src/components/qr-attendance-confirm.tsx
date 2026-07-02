@@ -43,6 +43,7 @@ export function QrAttendanceConfirm({ eventId }: { eventId: string }) {
       <div className="rounded-md border border-emerald-200 bg-emerald-50 p-5">
         <p className="text-lg font-bold text-emerald-900">출석 완료</p>
         <p className="mt-2 text-sm text-emerald-800">{staff.staffName} 선생님의 출석이 확인되었습니다.</p>
+        <p className="mt-1 text-xs text-emerald-700">MVP에서는 완료 상태를 화면에 표시하며, submitQrAttendance adapter로 실제 저장 연동을 이어갈 수 있습니다.</p>
       </div>
     );
   }

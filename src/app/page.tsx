@@ -144,7 +144,7 @@ export default async function PortalHomePage() {
                   </div>
                 </div>
                 <Link
-                  href={`/trainings/${event.eventId}/qr`}
+                  href={`/qr/${event.eventId}`}
                   className="shrink-0 rounded-md bg-slateblue-900 px-4 py-2 text-center text-sm font-semibold text-white hover:bg-brand-700"
                 >
                   QR 출석
