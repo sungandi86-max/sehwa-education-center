@@ -243,8 +243,8 @@ function AttendanceConfirmScreen({
   const mainEvent = events[0];
 
   return (
-    <section className="quiet-card animate-soft-in overflow-hidden">
-      <div className="bg-gradient-to-br from-white via-white to-brand-50/80 p-6 sm:p-7">
+    <section className="quiet-card animate-soft-in overflow-hidden rounded-[30px]">
+      <div className="bg-gradient-to-br from-white via-white to-brand-50/80 p-5 sm:p-7">
         <p className="text-sm font-semibold text-brand-600">{isGroup ? "묶음 QR 출석" : "교육 정보 확인"}</p>
         <h1 className="mt-3 text-3xl font-semibold leading-tight text-brand-900">
           {isGroup ? "한 번의 서명으로 여러 교육에 출석합니다." : mainEvent.title}
@@ -254,7 +254,7 @@ function AttendanceConfirmScreen({
         ) : null}
       </div>
 
-      <div className="space-y-5 p-6">
+      <div className="space-y-4 p-5 sm:p-6">
         {isGroup ? (
           <div className="space-y-3">
             {events.map((item, index) => (
@@ -282,12 +282,12 @@ function AttendanceConfirmScreen({
         </p>
 
         <div className="grid gap-3 sm:grid-cols-2">
-          <Link href="/" className="btn-secondary">
-            취소
-          </Link>
           <button type="button" onClick={onContinue} className="btn-primary">
             출석하기
           </button>
+          <Link href="/" className="btn-secondary">
+            취소
+          </Link>
         </div>
       </div>
     </section>
@@ -341,8 +341,15 @@ function SignatureScreen({
   onChange: (value: string) => void;
   onSubmit: () => void;
 }) {
+  const [padKey, setPadKey] = useState(0);
+  const clearSignature = () => {
+    onChange("");
+    setPadKey((value) => value + 1);
+  };
+
   return (
-    <section className="quiet-card animate-soft-in p-6">
+    <section className="quiet-card animate-soft-in overflow-hidden">
+      <div className="p-5 pb-0 sm:p-6 sm:pb-0">
       <button type="button" onClick={onBack} className="mb-5 inline-flex items-center gap-2 text-sm font-semibold text-brand-900">
         <ArrowLeft size={17} />
         이전으로
@@ -357,16 +364,21 @@ function SignatureScreen({
       </div>
 
       <div className="mt-7">
-        <SignaturePad onChange={onChange} />
+        <SignaturePad key={padKey} onChange={onChange} />
       </div>
 
       {message ? <p className="mt-6 rounded-2xl bg-rose-50 p-3 text-sm font-semibold text-rose-700">{message}</p> : null}
+      </div>
 
-      <div className="sticky bottom-4 z-10 mt-8 rounded-[24px] bg-white/90 pb-[env(safe-area-inset-bottom)] pt-3 backdrop-blur">
-      <button type="button" onClick={onSubmit} disabled={!signature} className="btn-primary min-h-14 w-full shadow-lift">
-        <PenLine size={17} />
-        서명 완료 및 저장
-      </button>
+      <div className="sticky bottom-0 z-10 mt-6 grid grid-cols-[0.9fr_1.1fr] gap-3 border-t border-slateblue-100 bg-white/92 p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] backdrop-blur">
+        <button type="button" onClick={clearSignature} className="btn-secondary min-h-14">
+          <Eraser size={17} />
+          다시쓰기
+        </button>
+        <button type="button" onClick={onSubmit} disabled={!signature} className="btn-primary min-h-14 shadow-lift">
+          <PenLine size={17} />
+          저장
+        </button>
       </div>
     </section>
   );
@@ -643,20 +655,6 @@ function SignaturePad({ onChange }: { onChange: (value: string) => void }) {
     setIsDrawing(false);
   };
 
-  const clear = () => {
-    if (!window.confirm("작성한 서명을 지울까요?")) {
-      return;
-    }
-
-    const canvas = canvasRef.current;
-    const context = canvas?.getContext("2d");
-    if (!canvas || !context) {
-      return;
-    }
-    context.clearRect(0, 0, canvas.width, canvas.height);
-    onChange("");
-  };
-
   return (
     <div className="select-none overscroll-contain">
       <div className="rounded-[24px] border border-slateblue-100 bg-white p-3 shadow-inner">
@@ -675,12 +673,6 @@ function SignaturePad({ onChange }: { onChange: (value: string) => void }) {
           onPointerCancel={stopDrawing}
           onPointerLeave={stopDrawing}
         />
-      </div>
-      <div className="mt-5 flex justify-end pb-2">
-      <button type="button" onClick={clear} className="btn-secondary min-h-12 w-auto px-5">
-        <Eraser size={17} />
-        다시쓰기
-      </button>
       </div>
     </div>
   );
