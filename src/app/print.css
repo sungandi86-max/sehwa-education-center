@@ -1,10 +1,32 @@
 @media print {
-  .qr-print-page {
-    border: 0 !important;
-    box-shadow: none !important;
+  @page {
+    size: A4 portrait;
+    margin: 10mm;
   }
 
+  html,
+  body {
+    width: 210mm;
+    min-height: 297mm;
+    background: #ffffff !important;
+  }
+
+  body {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .print-actions,
   .print\:hidden {
     display: none !important;
+  }
+
+  .qr-print-page {
+    width: 190mm !important;
+    min-height: 277mm !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    page-break-after: avoid;
+    page-break-inside: avoid;
   }
 }

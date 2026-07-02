@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Printer } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { PrintPageButton } from "@/components/print-page-button";
 import { QrDisplayCode } from "@/components/qr-display-code";
 import { appsScriptClient } from "@/lib/api/appsScriptClient";
@@ -33,39 +33,40 @@ export default async function GroupQrPrintPage({ params }: { params: Promise<{ g
   const attendanceUrl = `${PRODUCTION_ORIGIN}/qr/group/${groupId}`;
   const firstEvent = events[0];
   const lastEvent = events[events.length - 1];
-  const groupTitle = `${firstEvent.제목} 외 ${events.length - 1}개 연수`;
+  const groupTitle = events.length === 1 ? firstEvent.제목 : `${firstEvent.제목} 외 ${events.length - 1}개 연수`;
+  const dateText = `${formatDateOnly(firstEvent.시작일시)} ${formatTimeOnly(firstEvent.시작일시)} - ${formatTimeOnly(lastEvent.종료일시)}`;
+  const placeText = Array.from(new Set(events.map((event) => event.장소).filter(Boolean))).join(", ");
 
   return (
     <div className="mx-auto max-w-4xl print:max-w-none">
-      <div className="mb-5 flex items-center justify-between gap-3 print:hidden">
-        <Link href="/qr" className="btn-secondary">
+      <div className="print-actions mb-5 flex items-center justify-between gap-3 print:hidden">
+        <Link href="/" className="btn-secondary">
           <ArrowLeft size={17} />
-          QR 출석으로
+          홈으로
         </Link>
         <PrintPageButton />
       </div>
 
-      <article className="qr-print-page mx-auto flex min-h-[270mm] max-w-[190mm] flex-col bg-white px-8 py-8 text-center shadow-soft print:min-h-[273mm] print:max-w-none print:px-0 print:py-0 print:shadow-none">
-        <header className="border-b border-slateblue-100 pb-6">
-          <p className="text-lg font-extrabold text-brand-900">세화 교직원 교육센터</p>
-          <p className="mt-7 text-sm font-semibold text-brand-600">묶음 교육 QR</p>
-          <h1 className="mt-2 text-3xl font-extrabold leading-tight text-brand-900">{groupTitle}</h1>
-          <div className="mt-5 grid gap-2 text-base font-bold text-slate-600">
-            <p>
-              {formatDateOnly(firstEvent.시작일시)} {formatTimeOnly(firstEvent.시작일시)} - {formatTimeOnly(lastEvent.종료일시)}
-            </p>
-            <p>{firstEvent.장소}</p>
-          </div>
+      <article className="qr-print-page mx-auto flex min-h-[277mm] max-w-[190mm] flex-col bg-white px-9 py-8 text-center shadow-soft print:min-h-0 print:max-w-none print:px-0 print:py-0 print:shadow-none">
+        <header className="border-b border-slate-200 pb-5 print:pb-3">
+          <p className="text-xl font-extrabold text-brand-900 print:text-lg">세화 교직원 교육센터</p>
+          <p className="mt-5 text-sm font-bold text-brand-600 print:mt-3 print:text-[10pt]">묶음 연수 QR</p>
+          <h1 className="mt-2 text-4xl font-extrabold leading-tight text-brand-900 print:text-[26pt]">{groupTitle}</h1>
         </header>
 
-        <section className="py-7 text-left">
-          <p className="text-sm font-bold text-brand-700">교육 목록</p>
-          <div className="mt-3 grid gap-2">
+        <section className="grid gap-3 border-b border-slate-200 py-5 text-left print:py-3">
+          <InfoRow label="교육일시" value={dateText} />
+          <InfoRow label="장소" value={placeText || "장소 미정"} />
+        </section>
+
+        <section className="border-b border-slate-200 py-5 text-left print:py-3">
+          <p className="text-sm font-extrabold text-brand-700 print:text-[10pt]">교육 목록</p>
+          <div className="mt-3 grid gap-2 print:mt-2">
             {events.map((event, index) => (
-              <div key={event.eventId} className="rounded-2xl border border-slateblue-100 px-4 py-3">
-                <p className="text-xs font-bold text-brand-600">{index + 1}번째 교육</p>
-                <p className="mt-1 font-bold text-brand-900">{event.제목}</p>
-                <p className="mt-1 text-sm text-slate-500">
+              <div key={event.eventId} className="rounded-2xl border border-slate-200 px-4 py-3 print:rounded-none print:px-3 print:py-2">
+                <p className="text-xs font-bold text-brand-600 print:text-[8pt]">{index + 1}번째 교육</p>
+                <p className="mt-1 font-extrabold text-brand-900 print:text-[11pt]">{event.제목}</p>
+                <p className="mt-1 text-sm font-semibold text-slate-500 print:text-[9pt]">
                   {formatDateOnly(event.시작일시)} {formatTimeOnly(event.시작일시)} - {formatTimeOnly(event.종료일시)} · {event.장소}
                 </p>
               </div>
@@ -73,24 +74,31 @@ export default async function GroupQrPrintPage({ params }: { params: Promise<{ g
           </div>
         </section>
 
-        <section className="flex flex-1 flex-col items-center justify-center py-4">
-          <div className="w-full max-w-[105mm] print:max-w-[112mm]">
+        <section className="flex flex-1 flex-col items-center justify-center py-5 print:py-4">
+          <div className="w-full max-w-[118mm] print:max-w-[116mm]">
             <QrDisplayCode value={attendanceUrl} large />
           </div>
+          <p className="mt-3 break-all text-xs font-semibold text-slate-500 print:text-[9pt]">{attendanceUrl}</p>
         </section>
 
-        <footer className="border-t border-slateblue-100 pt-7">
-          <p className="text-3xl font-extrabold leading-snug text-brand-900">
-            휴대폰 카메라로 QR을 스캔하여
-            <br />
-            출석해주세요.
+        <footer className="border-t border-slate-200 pt-5 print:pt-3">
+          <p className="text-2xl font-extrabold leading-snug text-brand-900 print:text-[19pt]">
+            휴대폰 카메라로 QR을 스캔하여 출석해주세요.
           </p>
-          <p className="mt-5 inline-flex items-center gap-2 rounded-full bg-brand-50 px-4 py-2 text-sm font-bold text-brand-900 print:hidden">
-            <Printer size={16} />
-            Ctrl+P로 바로 인쇄할 수 있습니다.
+          <p className="mt-2 text-lg font-bold leading-snug text-slate-600 print:text-[13pt]">
+            한 번의 전자서명으로 아래 교육에 출석 처리됩니다.
           </p>
         </footer>
       </article>
+    </div>
+  );
+}
+
+function InfoRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="grid grid-cols-[88px_1fr] items-start gap-4 text-base print:grid-cols-[24mm_1fr] print:text-[12pt]">
+      <span className="font-bold text-slate-500">{label}</span>
+      <span className="font-extrabold text-brand-900">{value}</span>
     </div>
   );
 }

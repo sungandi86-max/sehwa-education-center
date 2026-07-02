@@ -9,7 +9,14 @@ export function QrDisplayCode({ value, large = false }: { value: string; large?:
         large ? "max-w-[560px] p-7 print:p-0" : "max-w-[460px] p-8"
       }`}
     >
-      <QRCode value={value} size={380} className="h-full w-full" viewBox="0 0 256 256" />
+      <QRCode
+        value={value}
+        title={value}
+        size={380}
+        className="h-full w-full"
+        data-qr-value={value}
+        viewBox="0 0 256 256"
+      />
     </div>
   );
 }
