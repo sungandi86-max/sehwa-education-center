@@ -270,13 +270,13 @@ function SignatureScreen({
         </p>
       </div>
 
-      <div className="mt-6">
+      <div className="mt-7">
         <SignaturePad onChange={onChange} />
       </div>
 
-      {message ? <p className="mt-4 rounded-2xl bg-rose-50 p-3 text-sm font-semibold text-rose-700">{message}</p> : null}
+      {message ? <p className="mt-6 rounded-2xl bg-rose-50 p-3 text-sm font-semibold text-rose-700">{message}</p> : null}
 
-      <button type="button" onClick={onSubmit} disabled={!signature} className="btn-primary mt-6 w-full">
+      <button type="button" onClick={onSubmit} disabled={!signature} className="btn-primary mt-8 min-h-14 w-full">
         <PenLine size={17} />
         서명 완료 및 저장
       </button>
@@ -399,6 +399,12 @@ function SignaturePad({ onChange }: { onChange: (value: string) => void }) {
       return;
     }
 
+    const preventScroll = (event: TouchEvent) => {
+      if (event.cancelable) {
+        event.preventDefault();
+      }
+    };
+
     const resize = () => {
       const rect = canvas.getBoundingClientRect();
       const scale = window.devicePixelRatio || 1;
@@ -416,8 +422,14 @@ function SignaturePad({ onChange }: { onChange: (value: string) => void }) {
     };
 
     resize();
+    canvas.addEventListener("touchstart", preventScroll, { passive: false });
+    canvas.addEventListener("touchmove", preventScroll, { passive: false });
     window.addEventListener("resize", resize);
-    return () => window.removeEventListener("resize", resize);
+    return () => {
+      canvas.removeEventListener("touchstart", preventScroll);
+      canvas.removeEventListener("touchmove", preventScroll);
+      window.removeEventListener("resize", resize);
+    };
   }, []);
 
   const getPoint = (event: React.PointerEvent<HTMLCanvasElement>) => {
@@ -430,6 +442,7 @@ function SignaturePad({ onChange }: { onChange: (value: string) => void }) {
   };
 
   const startDrawing = (event: React.PointerEvent<HTMLCanvasElement>) => {
+    event.preventDefault();
     const canvas = canvasRef.current;
     const context = canvas?.getContext("2d");
     if (!canvas || !context) {
@@ -446,6 +459,7 @@ function SignaturePad({ onChange }: { onChange: (value: string) => void }) {
     if (!isDrawing) {
       return;
     }
+    event.preventDefault();
     const canvas = canvasRef.current;
     const context = canvas?.getContext("2d");
     if (!canvas || !context) {
@@ -457,7 +471,8 @@ function SignaturePad({ onChange }: { onChange: (value: string) => void }) {
     onChange(canvas.toDataURL("image/png"));
   };
 
-  const stopDrawing = () => {
+  const stopDrawing = (event?: React.PointerEvent<HTMLCanvasElement>) => {
+    event?.preventDefault();
     setIsDrawing(false);
   };
 
@@ -472,21 +487,30 @@ function SignaturePad({ onChange }: { onChange: (value: string) => void }) {
   };
 
   return (
-    <div>
+    <div className="select-none overscroll-contain">
       <div className="rounded-[24px] border border-slateblue-100 bg-white p-3 shadow-inner">
         <canvas
           ref={canvasRef}
-          className="h-64 w-full touch-none rounded-[18px] bg-white sm:h-80"
+          className="h-64 w-full touch-none select-none overscroll-contain rounded-[18px] bg-white sm:h-80"
+          style={{
+            touchAction: "none",
+            overscrollBehavior: "contain",
+            userSelect: "none",
+            WebkitUserSelect: "none"
+          }}
           onPointerDown={startDrawing}
           onPointerMove={draw}
           onPointerUp={stopDrawing}
           onPointerCancel={stopDrawing}
+          onPointerLeave={stopDrawing}
         />
       </div>
-      <button type="button" onClick={clear} className="btn-secondary mt-4 w-full sm:w-auto">
+      <div className="mt-5 flex justify-end pb-2">
+      <button type="button" onClick={clear} className="btn-secondary min-h-12 w-auto px-5">
         <Eraser size={17} />
         다시쓰기
       </button>
+      </div>
     </div>
   );
 }
