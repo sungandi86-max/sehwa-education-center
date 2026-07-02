@@ -151,6 +151,7 @@ export interface AttendanceSummaryRow {
   staffId: string;
   staffName: string;
   department: string;
+  position?: string;
   targetStatus: string;
   attendanceStatus: AttendanceReportStatus;
   attendedAt?: string;

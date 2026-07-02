@@ -681,13 +681,18 @@ function getAttendanceSummary(req) {
 
   const targets = getTargetsForEvent(eventId);
   const attendanceRows = getAttendancesForEvent(eventId);
-  const people = targets.length > 0 ? targets.map(normalizeTargetPersonRow) : getStaffRows();
-  const rows = people.map((person, index) => {
+  const people = targets.length > 0
+    ? targets.map((target) => ({ person: normalizeTargetPersonRow(target), target }))
+    : getStaffRows().map((staff) => ({ person: staff, target: null }));
+  const rows = people.map((entry, index) => {
+    const person = entry.person;
+    const target = entry.target;
     const staffId = stringOf(person, STAFF_ID_KEYS);
     const attendance = attendanceRows.find((row) => stringOf(row, STAFF_ID_KEYS) === staffId);
-    const excluded = targets.length > 0 && isSignatureExcluded(person);
+    const eligible = isEligibleTrainingTarget(event, targets, target, person);
+    const excluded = eligible && target && isSignatureExcluded(target);
     const recognized = attendance && stringOf(attendance, ["상태", "status"]).indexOf("인정") >= 0;
-    const status = excluded ? "서명제외" : recognized ? "인정완료" : attendance ? "출석완료" : "미출석";
+    const status = !eligible ? "비대상" : excluded ? "서명제외" : recognized ? "인정완료" : attendance ? "출석완료" : "미출석";
 
     return {
       no: index + 1,
@@ -695,10 +700,11 @@ function getAttendanceSummary(req) {
       staffId,
       staffName: stringOf(person, STAFF_NAME_KEYS),
       department: stringOf(person, DEPARTMENT_KEYS),
-      targetStatus: targets.length > 0 ? "대상" : "대상확인필요",
+      position: stringOf(person, POSITION_KEYS),
+      targetStatus: eligible ? "대상" : "비대상",
       attendanceStatus: status,
       attendedAt: attendance ? valueOf(attendance, ["참석일시", "attendedAt"]) : "",
-      exceptionReason: excluded ? "사전에 서명 제외 처리" : "",
+      exceptionReason: !eligible ? "교육 대상자가 아닙니다." : excluded ? "사전에 서명 제외 처리" : "",
       signatureId: attendance ? stringOf(attendance, ["signatureId"]) : "",
       signatureFileId: attendance ? stringOf(attendance, ["signatureFileId"]) : "",
       signatureImageUrl: attendance ? stringOf(attendance, ["signatureImageUrl"]) : ""
@@ -709,7 +715,7 @@ function getAttendanceSummary(req) {
   const absentCount = rows.filter((row) => row.attendanceStatus === "미출석").length;
   const excludedCount = rows.filter((row) => row.attendanceStatus === "서명제외").length;
   const recognizedCount = rows.filter((row) => row.attendanceStatus === "인정완료").length;
-  const targetCount = rows.length;
+  const targetCount = rows.filter((row) => row.targetStatus === "대상").length;
   const attendanceRate = targetCount > 0 ? Math.round(((attendedCount + recognizedCount) / targetCount) * 1000) / 10 : 0;
 
   return {

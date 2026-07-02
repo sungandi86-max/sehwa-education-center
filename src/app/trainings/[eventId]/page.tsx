@@ -1,9 +1,10 @@
-import Link from "next/link";
-import { ExternalLink, FileUp, QrCode } from "lucide-react";
+import { Award, CheckCircle2, CircleSlash, Clock3, ExternalLink, Link2, UserCheck, Users } from "lucide-react";
 import { notFound } from "next/navigation";
+import type { ReactNode } from "react";
 import { AttendanceReportActions } from "@/components/attendance-report-actions";
 import { PageHeader, StatusBadge } from "@/components/ui";
 import { appsScriptClient, formatDateTime } from "@/lib/api/appsScriptClient";
+import type { AttendanceReportStatus, AttendanceSummaryRow } from "@/lib/api/appsScriptAdapter";
 import type { TrainingEventRow, TrainingMaterialRow } from "@/types/training";
 
 export default async function TrainingDetailPage({ params }: { params: Promise<{ eventId: string }> }) {
@@ -45,18 +46,8 @@ export default async function TrainingDetailPage({ params }: { params: Promise<{
               <h1 className="mt-4 text-3xl font-semibold tracking-tight text-brand-900 md:text-4xl">{title}</h1>
               {description ? <p className="mt-4 max-w-3xl text-base leading-7 text-slate-600">{description}</p> : null}
             </div>
-            <div className="grid gap-2 sm:grid-cols-2 md:w-[360px] md:grid-cols-1">
-              <Link href={`/qr/${event.eventId}`} className="btn-primary">
-                <QrCode size={18} />
-                QR 출석
-              </Link>
-              <Link href="/upload" className="btn-secondary">
-                <FileUp size={18} />
-                이수증 제출
-              </Link>
-              <div className="sm:col-span-2 md:col-span-1">
-                <AttendanceReportActions eventId={event.eventId} />
-              </div>
+            <div className="md:w-[420px]">
+              <AttendanceReportActions eventId={event.eventId} />
             </div>
           </div>
         </div>
@@ -71,27 +62,36 @@ export default async function TrainingDetailPage({ params }: { params: Promise<{
       {attendanceSummary ? (
         <section id="attendance-summary" className="quiet-card overflow-hidden">
           <div className="border-b border-slateblue-100 px-7 py-5 md:px-8">
-            <h2 className="text-xl font-semibold text-brand-900">출석현황</h2>
-            <p className="mt-1 text-sm leading-6 text-slate-500">
-              대상 {attendanceSummary.targetCount}명 · 출석 {attendanceSummary.attendedCount}명 · 미출석 {attendanceSummary.absentCount}명 · 출석률{" "}
-              {attendanceSummary.attendanceRate}%
-            </p>
+            <p className="text-sm font-bold text-brand-600">관리자 출석현황</p>
+            <h2 className="mt-1 text-2xl font-extrabold text-brand-900">{attendanceSummary.trainingTitle || title}</h2>
+            <p className="mt-2 text-sm leading-6 text-slate-500">교육 종료 후 대상자별 출석 상태와 전자서명 증빙을 확인합니다.</p>
           </div>
-          <div className="grid gap-3 p-7 md:p-8">
-            {attendanceSummary.rows.slice(0, 12).map((row) => (
-              <div key={`${row.eventId}-${row.staffId}`} className="flex flex-col gap-2 rounded-[22px] border border-slateblue-100 bg-white/80 p-4 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <p className="font-semibold text-brand-900">{row.staffName}</p>
-                  <p className="text-sm text-slate-500">
-                    {row.department} · {row.staffId}
-                  </p>
-                </div>
-                <span className="w-fit rounded-full bg-slate-100 px-3 py-1 text-sm font-semibold text-brand-800">{row.attendanceStatus}</span>
+          <div className="space-y-6 p-7 md:p-8">
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <SummaryMetric icon={<Users size={18} />} label="대상자 수" value={`${attendanceSummary.targetCount}명`} />
+              <SummaryMetric icon={<CheckCircle2 size={18} />} label="출석완료" value={`${attendanceSummary.attendedCount}명`} tone="text-emerald-700" />
+              <SummaryMetric icon={<Clock3 size={18} />} label="미출석" value={`${attendanceSummary.absentCount}명`} tone="text-amber-700" />
+              <SummaryMetric icon={<Award size={18} />} label="이미 인정" value={`${attendanceSummary.recognizedCount}명`} tone="text-sky-700" />
+              <SummaryMetric icon={<CircleSlash size={18} />} label="서명제외" value={`${attendanceSummary.excludedCount}명`} tone="text-rose-700" />
+              <SummaryMetric icon={<UserCheck size={18} />} label="출석률" value={`${attendanceSummary.attendanceRate}%`} tone="text-brand-900" />
+            </div>
+
+            <div className="overflow-hidden rounded-[24px] border border-slateblue-100 bg-white">
+              <div className="hidden grid-cols-[1.1fr_1fr_0.7fr_0.8fr_1fr_1fr_0.8fr] gap-3 border-b border-slateblue-100 bg-slateblue-50 px-4 py-3 text-xs font-bold text-slate-500 lg:grid">
+                <span>성명</span>
+                <span>소속부서</span>
+                <span>직책</span>
+                <span>상태</span>
+                <span>출석일시</span>
+                <span>예외사유</span>
+                <span>서명</span>
               </div>
-            ))}
-            {attendanceSummary.rows.length > 12 ? (
-              <p className="text-sm text-slate-500">전체 명단은 최종 명단 다운로드 파일에서 확인할 수 있습니다.</p>
-            ) : null}
+              <div className="divide-y divide-slateblue-100">
+                {attendanceSummary.rows.map((row) => (
+                  <AttendanceRow key={`${row.eventId}-${row.staffId}`} row={row} />
+                ))}
+              </div>
+            </div>
           </div>
         </section>
       ) : null}
@@ -141,6 +141,76 @@ function InfoItem({ label, value }: { label: string; value: string }) {
       <p className="mt-2 text-sm font-semibold leading-6 text-brand-900">{value}</p>
     </div>
   );
+}
+
+function SummaryMetric({
+  icon,
+  label,
+  value,
+  tone = "text-brand-900"
+}: {
+  icon: ReactNode;
+  label: string;
+  value: string;
+  tone?: string;
+}) {
+  return (
+    <div className="rounded-[22px] border border-slateblue-100 bg-white/80 p-4">
+      <div className="flex items-center gap-2 text-slate-500">
+        <span className="text-brand-600">{icon}</span>
+        <p className="text-xs font-bold">{label}</p>
+      </div>
+      <p className={`mt-2 text-2xl font-extrabold ${tone}`}>{value}</p>
+    </div>
+  );
+}
+
+function AttendanceRow({ row }: { row: AttendanceSummaryRow }) {
+  const statusClass = getAttendanceStatusClass(row.attendanceStatus);
+  const signatureUrl = row.signatureImageUrl;
+
+  return (
+    <div className="grid gap-3 px-4 py-4 text-sm lg:grid-cols-[1.1fr_1fr_0.7fr_0.8fr_1fr_1fr_0.8fr] lg:items-center">
+      <div>
+        <p className="font-extrabold text-brand-900">{row.staffName || "-"}</p>
+        <p className="mt-1 text-xs font-medium text-slate-500 lg:hidden">{row.staffId}</p>
+      </div>
+      <DataCell label="소속부서" value={row.department || "-"} />
+      <DataCell label="직책" value={row.position || "-"} />
+      <div>
+        <span className={`inline-flex w-fit rounded-full px-3 py-1 text-xs font-bold ring-1 ${statusClass}`}>{row.attendanceStatus}</span>
+      </div>
+      <DataCell label="출석일시" value={formatDateTime(row.attendedAt) || "-"} />
+      <DataCell label="예외사유" value={row.exceptionReason || "-"} />
+      <div>
+        {signatureUrl ? (
+          <a href={signatureUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 font-bold text-brand-700 hover:text-brand-900">
+            <Link2 size={15} />
+            서명 확인
+          </a>
+        ) : (
+          <span className="text-sm font-medium text-slate-400">-</span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function DataCell({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <p className="text-xs font-bold text-slate-400 lg:hidden">{label}</p>
+      <p className="mt-1 text-sm font-medium text-slate-600 lg:mt-0">{value}</p>
+    </div>
+  );
+}
+
+function getAttendanceStatusClass(status: AttendanceReportStatus) {
+  if (status === "출석완료") return "bg-emerald-50 text-emerald-700 ring-emerald-100";
+  if (status === "인정완료") return "bg-sky-50 text-sky-700 ring-sky-100";
+  if (status === "서명제외") return "bg-rose-50 text-rose-700 ring-rose-100";
+  if (status === "비대상") return "bg-slate-100 text-slate-600 ring-slate-200";
+  return "bg-amber-50 text-amber-700 ring-amber-100";
 }
 
 function readEvent(event: TrainingEventRow, keys: string[], fallback = "") {

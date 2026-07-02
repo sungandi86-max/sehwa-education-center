@@ -287,6 +287,7 @@ export const mockAppsScriptAdapter: AppsScriptAdapter = {
         staffId,
         staffName: getStaffName(target),
         department: getDepartment(target),
+        position: getRecordString(target, ["직책", "직위", "position"]),
         targetStatus: "대상",
         attendanceStatus: attendance ? ("출석완료" as const) : ("미출석" as const),
         attendedAt: getRecordString(attendance, ["참석일시", "attendedAt"]),

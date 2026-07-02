@@ -15,7 +15,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: true, data });
   } catch {
     return NextResponse.json(
-      { message: "최종 명단을 생성하지 못했습니다. 잠시 후 다시 시도해주세요." },
+      { message: "최종 서명부를 생성하지 못했습니다. 잠시 후 다시 시도해주세요." },
       { status: 502 }
     );
   }
