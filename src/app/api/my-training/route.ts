@@ -14,12 +14,16 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "성명을 입력해주세요." }, { status: 400 });
   }
 
-  const result = await appsScriptClient.lookupMyTrainingStatus({
-    staffId: body.staffId,
-    staffName: body.staffName,
-    department: body.department,
-    year: body.year ?? APP_CONFIG.currentYear
-  });
+  try {
+    const result = await appsScriptClient.lookupMyTrainingStatus({
+      staffId: body.staffId,
+      staffName: body.staffName,
+      department: body.department,
+      year: body.year ?? APP_CONFIG.currentYear
+    });
 
-  return NextResponse.json(result);
+    return NextResponse.json(result);
+  } catch {
+    return NextResponse.json({ error: "이수현황을 불러오지 못했습니다. 잠시 후 다시 시도해주세요." }, { status: 502 });
+  }
 }
