@@ -1,4 +1,5 @@
 import { PageHeader, Panel, StatusBadge } from "@/components/ui";
+import { StaffSessionBanner } from "@/components/staff-session-provider";
 import { APP_CONFIG } from "@/lib/config";
 import { appsScriptClient, formatDateTime, getTrainingTitle } from "@/lib/api/appsScriptClient";
 
@@ -16,6 +17,7 @@ export default async function MyTrainingPage({
   return (
     <div className="space-y-5">
       <PageHeader title="내 이수 확인" description="이름 또는 교직원ID로 2026년 교육·연수 이수 상태를 확인합니다." />
+      <StaffSessionBanner />
       <Panel>
         <form className="flex flex-col gap-3 md:flex-row">
           <input name="q" defaultValue={q} className="focus-ring min-w-0 flex-1 rounded-md border border-slate-300 px-3 py-2" placeholder="이름 또는 교직원ID" />

@@ -195,7 +195,24 @@ export const appsScriptClient = {
   async findStaff({ name, department }: { name: string; department?: string }): Promise<StaffRow[]> {
     if (!APPS_SCRIPT_API_URL) {
       const member = await mockAppsScriptAdapter.findStaff(name);
-      return member ? [member] : [];
+      if (member) {
+        return [member];
+      }
+
+      if (name.trim() === "박숙현") {
+        return [
+          {
+            교직원ID: "T001",
+            성명: "박숙현",
+            소속부서: department || "보건실",
+            직위: "보건교사",
+            이메일: "",
+            재직상태: "재직"
+          }
+        ];
+      }
+
+      return [];
     }
 
     const rows = await postAppsScript<RawRecord[]>({

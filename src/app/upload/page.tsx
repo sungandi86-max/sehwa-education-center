@@ -1,4 +1,5 @@
 import { PageHeader, Panel, StatusBadge } from "@/components/ui";
+import { StaffSessionBanner, StaffSessionFields } from "@/components/staff-session-provider";
 import { APP_CONFIG } from "@/lib/config";
 import { appsScriptClient, formatDateTime, getTrainingTitle } from "@/lib/api/appsScriptClient";
 
@@ -15,10 +16,12 @@ export default async function UploadPage({
   return (
     <div className="space-y-5">
       <PageHeader title="이수증 업로드" description="외부 연수 또는 온라인 연수 이수증을 제출하고 처리 상태를 확인합니다." />
+      <StaffSessionBanner />
 
       <div className="grid gap-5 xl:grid-cols-[0.85fr_1.15fr]">
         <Panel title="이수증 제출">
           <form className="grid gap-4">
+            <StaffSessionFields />
             <label className="grid gap-2 text-sm font-semibold text-slate-700">
               제출 대상 교육
               <select className="focus-ring rounded-md border border-slate-300 px-3 py-2 font-normal">

@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import type { MyTrainingLookupResult, MyTrainingItemStatus } from "@/lib/my-training-lookup";
+import { StaffSessionBanner, useStaffSession, type StaffSession } from "@/components/staff-session-provider";
+import type { MyTrainingItemStatus, MyTrainingLookupResult } from "@/lib/my-training-lookup";
 
 const statusClassMap: Record<MyTrainingItemStatus, string> = {
   이수완료: "bg-emerald-100 text-emerald-800",
@@ -18,6 +19,7 @@ export function MyTrainingLookupCard({
   incompleteCount: number;
 }) {
   const [isOpen, setIsOpen] = useState(false);
+  const { staff } = useStaffSession();
 
   return (
     <>
@@ -28,7 +30,9 @@ export function MyTrainingLookupCard({
       >
         <p className="text-sm font-bold text-teal-700">내 이수 확인</p>
         <h3 className="mt-2 text-xl font-bold text-slateblue-900">내 이수 확인</h3>
-        <p className="mt-3 text-sm leading-6 text-slate-600">2026년 교직원 교육 이수 현황을 확인합니다.</p>
+        <p className="mt-3 text-sm leading-6 text-slate-600">
+          {staff ? `${staff.staffName} 선생님의 2026년 교육 이수 현황을 확인합니다.` : "성명으로 본인 확인 후 2026년 교육 이수 현황을 확인합니다."}
+        </p>
         <div className="mt-auto w-full border-t border-slate-200 pt-4">
           <div className="flex items-center justify-between gap-3">
             <p className="font-bold text-slateblue-900">
@@ -46,42 +50,87 @@ export function MyTrainingLookupCard({
 }
 
 function MyTrainingLookupModal({ onClose }: { onClose: () => void }) {
+  const { setStaff } = useStaffSession();
   const [staffName, setStaffName] = useState("");
   const [department, setDepartment] = useState("");
+  const [matches, setMatches] = useState<StaffSession[]>([]);
   const [result, setResult] = useState<MyTrainingLookupResult | null>(null);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
+  const loadTrainingResult = async (staff: StaffSession) => {
+    const response = await fetch("/api/my-training", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        staffName: staff.staffName,
+        department: staff.department,
+        year: 2026
+      })
+    });
+
+    const payload = await response.json();
+
+    if (response.ok) {
+      setResult(payload as MyTrainingLookupResult);
+    }
+  };
+
+  const applyStaffSession = async (staff: StaffSession) => {
+    setStaff(staff);
+    setStaffName(staff.staffName);
+    setDepartment(staff.department);
+    setMatches([]);
+    setError("");
+    await loadTrainingResult(staff);
+  };
+
   const submitLookup = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError("");
+    setMatches([]);
+    setResult(null);
     setIsLoading(true);
 
     try {
-      const response = await fetch("/api/my-training", {
+      const response = await fetch("/api/staff/find", {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
-          staffName,
-          department: department || undefined,
-          year: 2026
+          name: staffName,
+          department: department || undefined
         })
       });
 
-      const payload = await response.json();
+      const payload = (await response.json()) as {
+        success?: boolean;
+        data?: StaffSession[];
+        error?: string;
+      };
 
-      if (!response.ok) {
+      if (!response.ok || !payload.success) {
         setError(payload.error ?? "조회 중 오류가 발생했습니다.");
         return;
       }
 
-      setResult(payload as MyTrainingLookupResult);
+      const found = payload.data ?? [];
 
-      if ((payload as MyTrainingLookupResult).needsDepartment) {
-        setError("동명이인이 있습니다. 소속/부서를 선택한 뒤 다시 조회해주세요.");
+      if (found.length === 0) {
+        setError("조회된 교직원이 없습니다. 성명과 소속/부서를 확인해주세요.");
+        return;
       }
+
+      if (found.length === 1) {
+        await applyStaffSession(found[0]);
+        return;
+      }
+
+      setMatches(found);
+      setError("동명이인이 있습니다. 본인의 소속/부서를 선택해주세요.");
     } catch {
       setError("조회 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.");
     } finally {
@@ -96,11 +145,13 @@ function MyTrainingLookupModal({ onClose }: { onClose: () => void }) {
       <div className="max-h-[88vh] w-full max-w-2xl overflow-y-auto rounded-md border border-slate-200 bg-white shadow-xl">
         <div className="border-b border-slate-200 px-5 py-4">
           <p className="text-sm font-bold text-teal-700">내 이수 확인</p>
-          <h2 className="mt-1 text-xl font-bold text-slateblue-900">성명으로 이수 현황 조회</h2>
-          <p className="mt-2 text-sm leading-6 text-slate-600">로그인 없이 성명으로 조회합니다. 동명이인인 경우에만 소속/부서를 선택합니다.</p>
+          <h2 className="mt-1 text-xl font-bold text-slateblue-900">성명으로 교직원 조회</h2>
+          <p className="mt-2 text-sm leading-6 text-slate-600">로그인 없이 성명으로 조회합니다. 동명이인은 소속/부서로 구분합니다.</p>
         </div>
 
         <form onSubmit={submitLookup} className="space-y-4 px-5 py-5">
+          <StaffSessionBanner compact />
+
           <div className="grid gap-3 md:grid-cols-[1fr_0.9fr]">
             <label className="block">
               <span className="text-sm font-semibold text-slateblue-900">성명 *</span>
@@ -112,40 +163,47 @@ function MyTrainingLookupModal({ onClose }: { onClose: () => void }) {
                 }}
                 required
                 className="focus-ring mt-2 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-                placeholder="예: 최민서"
+                placeholder="예: 박숙현"
               />
             </label>
 
             <label className="block">
               <span className="text-sm font-semibold text-slateblue-900">소속/부서</span>
-              {result?.needsDepartment && result.departments?.length ? (
-                <select
-                  value={department}
-                  onChange={(event) => {
-                    setDepartment(event.target.value);
-                    setError("");
-                  }}
-                  className="focus-ring mt-2 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-                >
-                  <option value="">선택해주세요</option>
-                  {result.departments.map((item) => (
-                    <option key={item} value={item}>
-                      {item}
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                <input
-                  value={department}
-                  onChange={(event) => setDepartment(event.target.value)}
-                  className="focus-ring mt-2 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-                  placeholder="선택 입력"
-                />
-              )}
+              <input
+                value={department}
+                onChange={(event) => {
+                  setDepartment(event.target.value);
+                  setError("");
+                }}
+                className="focus-ring mt-2 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                placeholder="동명이인일 때 입력"
+              />
             </label>
           </div>
 
           {error ? <p className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">{error}</p> : null}
+
+          {matches.length > 1 ? (
+            <div className="space-y-2 rounded-md border border-slate-200 bg-slate-50 p-3">
+              {matches.map((member) => (
+                <button
+                  key={`${member.staffId}-${member.department}`}
+                  type="button"
+                  onClick={() => applyStaffSession(member)}
+                  className="flex w-full items-center justify-between rounded-md border border-slate-200 bg-white px-4 py-3 text-left hover:border-brand-200 hover:bg-brand-50"
+                >
+                  <span>
+                    <span className="font-bold text-slateblue-900">{member.staffName}</span>
+                    <span className="ml-2 text-sm text-slate-500">
+                      {member.department}
+                      {member.position ? ` · ${member.position}` : ""}
+                    </span>
+                  </span>
+                  <span className="text-sm font-semibold text-slateblue-900">선택</span>
+                </button>
+              ))}
+            </div>
+          ) : null}
 
           <div className="flex justify-end gap-2">
             <button
@@ -169,9 +227,9 @@ function MyTrainingLookupModal({ onClose }: { onClose: () => void }) {
           <div className="border-t border-slate-200 bg-slate-50 px-5 py-5">
             <div className="mb-4">
               <p className="font-bold text-slateblue-900">
-                {visibleResult.staff?.staffName} · {visibleResult.staff?.department}
+                {visibleResult.staff?.staffName} 선생님 · {visibleResult.staff?.department}
               </p>
-              <p className="mt-1 text-sm text-slate-500">교육이력과 이수증 제출 상태를 함께 반영한 결과입니다.</p>
+              <p className="mt-1 text-sm text-slate-500">교직원 조회 정보가 새로고침 전까지 유지됩니다.</p>
             </div>
 
             <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
