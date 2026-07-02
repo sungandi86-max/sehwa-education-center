@@ -63,13 +63,19 @@ export interface TrainingTargetRow {
 export interface TrainingAttendanceRow {
   attendanceId: string;
   eventId: string;
+  eventGroupId?: string;
   교직원ID: string;
   성명: string;
   소속부서: string;
+  직책?: string;
   참석일시: string;
   참석방법: AttendanceMethod;
+  상태?: string;
   처리자?: string;
   uploadId?: string;
+  signatureId?: string;
+  signatureFileId?: string;
+  signatureImageUrl?: string;
   비고?: string;
 }
 
@@ -100,16 +106,22 @@ export interface CertificateUploadRow {
   파일명: string;
   파일ID: string;
   파일URL: string;
+  파일링크?: string;
   업로드일시: string;
   상태: UploadStatus;
   certificateNumber?: string;
+  이수증번호?: string;
   trainingTitle?: string;
+  연수명?: string;
   completedAt?: string;
+  이수일자?: string;
   trainingHours?: string;
   issuer?: string;
+  이수기관?: string;
   rawText?: string;
   confidence?: number;
   aiReviewStatus: AiReviewStatus;
+  AI추출상태?: AiReviewStatus;
   반려사유?: string;
   검토자?: string;
   검토일시?: string;

@@ -140,6 +140,7 @@ export function CertificateUploadClient({ events }: { events: TrainingEventRow[]
           fileBase64,
           fileId: `placeholder-${Date.now()}`,
           fileUrl: "placeholder://certificate-upload",
+          fileLink: "placeholder://certificate-upload",
           certificateNumber: extraction.certificateNumber,
           trainingTitle: extraction.trainingTitle || selectedEvent.제목,
           completedAt: extraction.completedAt,
@@ -363,11 +364,17 @@ function AiExtractionPanel({
 }
 
 function UploadStatusCard({ upload, trainingTitle }: { upload: CertificateUploadRow; trainingTitle: string }) {
+  const certificateNumber = upload.이수증번호 ?? upload.certificateNumber;
+  const submittedTrainingTitle = upload.연수명 ?? upload.trainingTitle ?? trainingTitle;
+  const completedAt = upload.이수일자 ?? upload.completedAt;
+  const issuer = upload.이수기관 ?? upload.issuer;
+  const fileLink = upload.파일링크 ?? upload.파일URL;
+
   return (
     <div className="rounded-[22px] border border-slateblue-100 bg-slateblue-50/70 p-5 transition hover:bg-white">
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
-          <p className="font-extrabold text-brand-900">{trainingTitle}</p>
+          <p className="font-extrabold text-brand-900">{submittedTrainingTitle}</p>
           <p className="mt-1 text-sm text-slate-500">
             {upload.파일명} · {formatSimpleDate(upload.업로드일시)}
           </p>
@@ -379,12 +386,13 @@ function UploadStatusCard({ upload, trainingTitle }: { upload: CertificateUpload
       </div>
 
       <div className="mt-5 grid gap-3 border-t border-slateblue-100 pt-5 text-sm md:grid-cols-3">
-        <AiField label="이수증 번호" value={upload.certificateNumber ?? "확인 중"} />
-        <AiField label="연수명" value={upload.trainingTitle ?? "확인 중"} />
+        <AiField label="이수증 번호" value={certificateNumber ?? "확인 중"} />
+        <AiField label="연수명" value={submittedTrainingTitle} />
         <AiField label="성명" value={upload.성명} />
-        <AiField label="이수일자" value={upload.completedAt ?? "확인 중"} />
+        <AiField label="이수일자" value={completedAt ?? "확인 중"} />
         <AiField label="이수시간" value={upload.trainingHours ?? "확인 중"} />
-        <AiField label="발급기관" value={upload.issuer ?? "확인 중"} />
+        <AiField label="발급기관" value={issuer ?? "확인 중"} />
+        <AiField label="파일링크" value={fileLink || "확인 중"} />
         <AiField label="신뢰도" value={`${Math.round((Number(upload.confidence) || 0) * 100)}%`} icon={<Brain size={16} />} />
       </div>
     </div>

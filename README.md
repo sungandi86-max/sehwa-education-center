@@ -10,10 +10,18 @@
 - 단일 QR 출석: `/qr/[eventId]`
 - 묶음 QR 출석: `/qr/group/[groupId]`
 - A4 QR 출력: `/print/qr/[eventId]`, `/print/qr/group/[groupId]`
-- 전자서명 1회 저장 요청
+- 전자서명 1회 제출
 - 내 이수현황 조회
 - 이수증 제출 기록 저장
-- Apps Script 연동 및 Mock Adapter fallback
+- Google Sheet / Apps Script 연동
+
+## Data Rule
+
+- Google Sheet에는 사람이 읽을 수 있는 운영 기록과 Drive 링크만 남깁니다.
+- 전자서명 base64를 Google Sheet에 직접 길게 저장하지 않습니다.
+- Apps Script는 전자서명을 PNG로 변환해 Google Drive에 저장합니다.
+- `교육참석`에는 `signatureId`, `signatureFileId`, `signatureImageUrl`만 기록합니다.
+- `이수증업로드`는 단순 제출 기록 중심으로 관리합니다.
 
 ## Runtime
 
@@ -34,8 +42,9 @@ NEXT_PUBLIC_APPS_SCRIPT_API_URL=https://script.google.com/macros/s/.../exec
 1. 교육 담당자는 Google Sheet에서 교육목록, 교육대상, 공지, 자료, 승인/반려를 관리합니다.
 2. 교육 당일 `/print/qr/[eventId]` 또는 `/print/qr/group/[groupId]`에서 A4 QR을 출력합니다.
 3. 교직원은 QR을 스캔하고 StaffLookupModal에서 본인 확인 후 전자서명합니다.
-4. Apps Script는 `교육참석` 또는 `이수증업로드` 탭에 행을 추가합니다.
-5. 교직원은 `/my`에서 내 이수현황과 제출 상태를 확인합니다.
+4. Apps Script는 전자서명을 Drive PNG로 저장하고 `교육참석`에 참석 기록과 서명 파일 링크를 남깁니다.
+5. 이수증 제출은 `이수증업로드`에 `업로드일시`, `성명`, `연수명`, `이수증번호`, `이수기관`, `이수일자`, `파일링크`, `상태`, `AI추출상태` 중심으로 저장합니다.
+6. 교직원은 `/my`에서 내 이수현황과 제출 상태를 확인합니다.
 
 ## Documentation
 
@@ -52,4 +61,3 @@ npm run lint
 npm run typecheck
 npm run build
 ```
-

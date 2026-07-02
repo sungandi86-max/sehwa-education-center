@@ -59,6 +59,9 @@ export interface SubmitAttendanceResult {
   message: string;
   status?: "completed" | "already";
   eventId?: string;
+  signatureId?: string;
+  signatureFileId?: string;
+  signatureImageUrl?: string;
 }
 
 export interface SubmitGroupAttendanceResult {
@@ -79,6 +82,7 @@ export interface UploadCertificateInput {
   fileBase64?: string;
   fileId?: string;
   fileUrl?: string;
+  fileLink?: string;
   certificateNumber?: string;
   trainingTitle?: string;
   completedAt?: string;

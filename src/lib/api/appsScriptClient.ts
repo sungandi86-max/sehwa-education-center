@@ -436,14 +436,20 @@ export const appsScriptClient = {
       fileBase64: input.fileBase64,
       fileId: input.fileId,
       fileUrl: input.fileUrl,
+      fileLink: input.fileLink ?? input.fileUrl,
       certificateNumber: input.certificateNumber,
+      이수증번호: input.certificateNumber,
       trainingTitle: input.trainingTitle,
+      연수명: input.trainingTitle,
       completedAt: input.completedAt,
+      이수일자: input.completedAt,
       trainingHours: input.trainingHours,
       issuer: input.issuer,
+      이수기관: input.issuer,
       rawText: input.rawText,
       confidence: input.confidence,
       aiReviewStatus: input.aiReviewStatus,
+      AI추출상태: input.aiReviewStatus,
       memo: input.memo
     });
     const data = result.data ?? {};
@@ -470,12 +476,14 @@ export const appsScriptClient = {
       return mockAppsScriptAdapter.getMyUploads(query, year);
     }
 
-    return postAppsScript<CertificateUploadRow[]>({
+    const rows = await postAppsScript<RawRecord[]>({
       action: "getMyUploads",
       staffId: query,
       query,
       year: year ? String(year) : undefined
     });
+
+    return rows.map(normalizeCertificateUpload);
   },
   getUploadStatus: mockAppsScriptAdapter.getUploadStatus.bind(mockAppsScriptAdapter)
 };
@@ -542,7 +550,7 @@ async function composeLiveMyTrainingStatus(input: {
 
   const items = targetEvents.map((event) => {
     const completion = completionRows.find((row) => getEventId(row) === event.eventId && isCompleted(row));
-    const upload = uniqueUploads.find((row) => getEventId(row) === event.eventId);
+    const upload = uniqueUploads.find((row) => getEventId(row) === event.eventId || getUploadTrainingTitle(row) === event.제목);
     const uploadStatus = getRecordString(upload as RawRecord | undefined, ["상태", "status"]);
     const approvedUpload = isApproved(uploadStatus) ? upload : undefined;
     const rejectedUpload = isRejected(uploadStatus) ? upload : undefined;
@@ -622,8 +630,48 @@ function normalizeTrainingDetail(detail: RawRecord): TrainingDetail | undefined 
   };
 }
 
+function normalizeCertificateUpload(row: RawRecord): CertificateUploadRow {
+  const fileUrl = getRecordString(row, ["파일링크", "파일URL", "fileLink", "fileUrl"]);
+  const aiReviewStatus = getRecordString(row, ["AI추출상태", "aiReviewStatus"], "pending") as CertificateUploadRow["aiReviewStatus"];
+
+  return {
+    ...(row as unknown as CertificateUploadRow),
+    uploadId: getRecordString(row, ["uploadId", "업로드ID"]) || `${getRecordString(row, ["eventId"])}-${getRecordString(row, ["교직원ID", "staffId"])}-${getRecordString(row, ["업로드일시", "타임스탬프", "timestamp"])}`,
+    eventId: getRecordString(row, ["eventId", "교육ID"]),
+    교직원ID: getRecordString(row, ["교직원ID", "staffId"]),
+    성명: getRecordString(row, ["성명", "name", "staffName"]),
+    소속부서: getRecordString(row, ["소속부서", "department"]),
+    파일명: getRecordString(row, ["파일명", "fileName"], "이수증 파일"),
+    파일ID: getRecordString(row, ["파일ID", "fileId"]),
+    파일URL: fileUrl,
+    파일링크: fileUrl,
+    업로드일시: getRecordString(row, ["업로드일시", "타임스탬프", "timestamp", "uploadedAt"]),
+    상태: getRecordString(row, ["상태", "status"], "제출완료") as CertificateUploadRow["상태"],
+    certificateNumber: getRecordString(row, ["certificateNumber", "이수증번호", "이수번호"]),
+    이수증번호: getRecordString(row, ["이수증번호", "이수번호", "certificateNumber"]),
+    trainingTitle: getRecordString(row, ["trainingTitle", "연수명", "연수 제목", "교육명"]),
+    연수명: getRecordString(row, ["연수명", "연수 제목", "trainingTitle", "교육명"]),
+    completedAt: getRecordString(row, ["completedAt", "이수일자", "이수날짜"]),
+    이수일자: getRecordString(row, ["이수일자", "이수날짜", "completedAt"]),
+    issuer: getRecordString(row, ["issuer", "이수기관", "발급기관"]),
+    이수기관: getRecordString(row, ["이수기관", "발급기관", "issuer"]),
+    aiReviewStatus,
+    AI추출상태: aiReviewStatus,
+    rawText: getRecordString(row, ["rawText"]),
+    confidence: Number(getRecordString(row, ["confidence"])) || undefined,
+    반려사유: getRecordString(row, ["반려사유", "rejectReason"]) || undefined,
+    검토자: getRecordString(row, ["검토자", "reviewer"]) || undefined,
+    검토일시: getRecordString(row, ["검토일시", "reviewedAt"]) || undefined,
+    비고: getRecordString(row, ["비고", "memo"]) || undefined
+  };
+}
+
 function getEventId(row: unknown) {
   return getRecordString(row as RawRecord | undefined, ["eventId", "교육ID"]);
+}
+
+function getUploadTrainingTitle(row: unknown) {
+  return getRecordString(row as RawRecord | undefined, ["연수명", "연수 제목", "trainingTitle", "교육명"]);
 }
 
 function isCompleted(row: unknown) {
@@ -745,6 +793,7 @@ function createQrAttendancePayload(input: SubmitQrAttendanceInput): RawRecord {
     성명: input.staffName,
     소속부서: input.department,
     직책: input.position,
+    signatureStorage: "driveImage",
     signature: input.signature
   };
 }
@@ -763,6 +812,9 @@ function normalizeAttendanceResult(row: RawRecord, fallbackEventId = "", fallbac
     eventId: asString(row.eventId, fallbackEventId),
     attendanceId: asString(row.attendanceId),
     status: already ? "already" : "completed",
+    signatureId: asString(row.signatureId),
+    signatureFileId: asString(row.signatureFileId),
+    signatureImageUrl: asString(row.signatureImageUrl),
     message
   };
 }

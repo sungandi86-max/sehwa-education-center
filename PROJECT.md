@@ -24,13 +24,14 @@
 - 이수증 제출
 - Google Sheet / Apps Script 연동
 
-## Out of Scope
+## Evidence Storage Rule
 
-- 웹 관리자 교육 생성
-- 웹 관리자 승인/반려 UI
-- 정식 로그인/SSO
-- 완전한 Drive 파일 업로드 자동화
-- 보고서 자동 생성 고도화
+- Google Sheet에는 사람이 이해할 수 있는 기록과 Drive 링크만 저장합니다.
+- 전자서명 base64 원문은 `교육참석` 시트에 저장하지 않습니다.
+- Apps Script는 전자서명을 PNG로 변환해 Google Drive에 저장합니다.
+- `교육참석`에는 `signatureId`, `signatureFileId`, `signatureImageUrl`을 저장합니다.
+- 그룹 QR 출석은 전자서명 1개를 공유하고, 교육 개수만큼 참석 행을 저장합니다.
+- 이수증 제출은 제출 기록 중심으로 단순하게 저장합니다.
 
 ## Staff Session Rule
 
@@ -41,6 +42,13 @@
 - 새 브라우저 세션 또는 세션 초기화 시 다시 조회할 수 있습니다.
 - `다른 사용자 조회`를 누르면 기존 Staff와 이전 조회 결과를 비웁니다.
 
+## Out of Scope
+
+- 웹 관리자 교육 생성
+- 웹 관리자 승인/반려 UI
+- 정식 로그인/SSO
+- 보고서 자동 생성 고도화
+
 ## Deployment
 
 - Repository: `sungandi86-max/sehwa-education-center`
@@ -48,4 +56,3 @@
 - Hosting: Vercel Production
 - Production URL: `https://sehwa-education-center.vercel.app`
 - Required env var: `NEXT_PUBLIC_APPS_SCRIPT_API_URL`
-

@@ -28,6 +28,7 @@ export async function POST(request: Request) {
       fileBase64: body.fileBase64,
       fileId: body.fileId ?? `placeholder-${Date.now()}`,
       fileUrl: body.fileUrl ?? "placeholder://certificate-upload",
+      fileLink: body.fileLink ?? body.fileUrl ?? "placeholder://certificate-upload",
       certificateNumber: body.certificateNumber,
       trainingTitle: body.trainingTitle,
       completedAt: body.completedAt,
