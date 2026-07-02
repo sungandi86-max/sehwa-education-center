@@ -95,6 +95,7 @@ export interface SubmitAttendanceResult {
   message: string;
   status?: "completed" | "already" | "notTarget" | "excluded" | "notFound";
   eventId?: string;
+  attendedAt?: string;
   completedCount?: number;
   skippedCount?: number;
   blockedCount?: number;

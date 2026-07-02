@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowLeft, CheckCircle2, Eraser, Home, LoaderCircle, PenLine, Search, UserRound } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { ArrowLeft, Building2, CalendarDays, CheckCircle2, Clock3, Eraser, Home, LoaderCircle, MapPin, PenLine, Search, UserRound } from "lucide-react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { MyTrainingLookupModal } from "@/components/my-training-lookup-modal";
 import { useStaffSession, type StaffSession } from "@/components/staff-session-provider";
 
@@ -29,7 +29,9 @@ interface AttendanceResult {
     eventId?: string;
     status?: AttendanceStatus;
     message?: string;
+    attendedAt?: string;
   }[];
+  attendedAt?: string;
 }
 
 interface EligibilityResult {
@@ -411,24 +413,30 @@ function DoneScreen({
   const resultByEventId = new Map((result?.results ?? []).map((item) => [item.eventId, item]));
   const title = getDoneTitle(result?.status, completedCount, skippedCount, blockedCount);
   const showCounts = completedCount > 0 || skippedCount > 0;
+  const primaryEvent = events[0];
+  const firstResultWithTime = result?.results?.find((item) => item.attendedAt);
+  const attendedAt = formatAttendanceTime(result?.attendedAt || firstResultWithTime?.attendedAt);
+  const successDetail =
+    completedCount > 0 && primaryEvent
+      ? `${primaryEvent.title} 출석이 정상적으로 저장되었습니다.`
+      : message;
 
   return (
     <section className="quiet-card animate-soft-in overflow-hidden text-center">
-      <div className="bg-gradient-to-br from-emerald-50 via-white to-brand-50 p-8">
-        <div className="mx-auto flex size-20 items-center justify-center rounded-full bg-white text-emerald-600 shadow-soft">
-          <CheckCircle2 size={42} />
+      <div className="bg-gradient-to-br from-emerald-50 via-white to-brand-50 px-6 py-8 sm:px-8">
+        <div className="mx-auto flex size-20 animate-[success-pop_0.26s_ease-out] items-center justify-center rounded-full bg-white text-emerald-600 shadow-soft">
+          <CheckCircle2 size={42} strokeWidth={2.3} />
         </div>
-        <h2 className="mt-6 text-3xl font-semibold text-brand-900">{title}</h2>
-        <p className="mt-3 text-base font-medium leading-7 text-slate-600">
-          {staffName} 선생님, 감사합니다.
-          <br />
-          {message}
+        <h2 className="mt-6 text-[1.65rem] font-semibold leading-tight text-brand-900 sm:text-3xl">{title}</h2>
+        <p className="mt-3 text-base font-semibold leading-7 text-slate-700">감사합니다, {staffName} 선생님.</p>
+        <p className="mx-auto mt-1 max-w-sm text-sm font-medium leading-6 text-slate-500">
+          {successDetail}
         </p>
       </div>
 
-      <div className="p-6">
+      <div className="px-5 py-6 sm:p-7">
         {showCounts ? (
-          <div className="grid gap-3 sm:grid-cols-3">
+          <div className="grid grid-cols-3 overflow-hidden rounded-[22px] border border-slateblue-100 bg-white shadow-[0_10px_30px_rgba(15,23,42,0.05)]">
             <ResultCount label="완료" value={completedCount} tone="text-emerald-700" />
             <ResultCount label="이미 출석" value={skippedCount} tone="text-amber-700" />
             <ResultCount label="처리 불가" value={blockedCount} tone="text-rose-700" />
@@ -448,29 +456,40 @@ function DoneScreen({
                   : "bg-rose-50 text-rose-700 ring-rose-100";
 
             return (
-              <div key={event.eventId} className="rounded-[22px] border border-slateblue-100 bg-slateblue-50/70 p-4">
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                  <div>
-                    <p className="text-sm font-semibold text-brand-600">교육명</p>
-                    <p className="mt-1 text-lg font-semibold text-brand-900">{event.title}</p>
+              <div key={event.eventId} className="rounded-[24px] border border-slateblue-100 bg-slateblue-50/70 p-4">
+                <div className="flex items-start gap-3">
+                  <span className={`mt-0.5 inline-flex shrink-0 items-center gap-1 rounded-full px-3 py-1 text-xs font-bold ring-1 ${statusClass}`}>
+                    <CheckCircle2 size={14} />
+                    {statusLabel}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <h3 className="text-lg font-extrabold leading-snug text-brand-900">{event.title}</h3>
+                    <div className="mt-3 grid gap-2 text-sm font-medium text-slate-600">
+                      <EventMeta icon={<CalendarDays size={16} />} value={event.date} />
+                      <EventMeta icon={<Clock3 size={16} />} value={event.time} />
+                      <EventMeta icon={<MapPin size={16} />} value={event.location} />
+                      <EventMeta icon={<Building2 size={16} />} value={event.department} />
+                    </div>
                   </div>
-                  <span className={`w-fit rounded-full px-3 py-1 text-xs font-semibold ring-1 ${statusClass}`}>{statusLabel}</span>
                 </div>
-                <p className="mt-2 text-sm leading-6 text-slate-500">
-                  {event.date} {event.time} · {event.location}
-                </p>
                 {eventResult?.message ? <p className="mt-2 text-sm font-medium text-slate-600">{eventResult.message}</p> : null}
               </div>
             );
           })}
         </div>
 
+        <div className="mt-5 rounded-[22px] bg-white/80 p-4 text-left text-sm leading-6 text-slate-500 ring-1 ring-slateblue-100">
+          {attendedAt ? <p className="font-bold text-brand-900">출석시간 {attendedAt}</p> : null}
+          <p className={attendedAt ? "mt-1" : ""}>전자서명과 출석 시간이 저장되었습니다.</p>
+          <p>최종 서명부 생성 시 증빙 자료로 사용됩니다.</p>
+        </div>
+
         <div className="mt-6 grid gap-3 sm:grid-cols-2">
-          <Link href="/" className="btn-secondary">
+          <Link href="/" className="btn-secondary min-h-14">
             <Home size={17} />
             홈으로
           </Link>
-          <Link href="/my" className="btn-primary">
+          <Link href="/my" className="btn-primary min-h-14">
             내 이수 확인
           </Link>
         </div>
@@ -481,10 +500,21 @@ function DoneScreen({
 
 function ResultCount({ label, value, tone }: { label: string; value: number; tone: string }) {
   return (
-    <div className="rounded-[22px] border border-slateblue-100 bg-white p-4">
-      <p className="text-sm text-slate-500">{label}</p>
-      <p className={`mt-1 text-3xl font-semibold ${tone}`}>{value}건</p>
+    <div className="border-r border-slateblue-100 px-2.5 py-3 last:border-r-0 sm:px-4">
+      <p className="text-[11px] font-bold text-slate-500 sm:text-xs">{label}</p>
+      <p className={`mt-1 text-xl font-extrabold leading-none sm:text-2xl ${tone}`}>{value}건</p>
     </div>
+  );
+}
+
+function EventMeta({ icon, value }: { icon: ReactNode; value: string }) {
+  if (!value) return null;
+
+  return (
+    <p className="flex items-center gap-2">
+      <span className="text-brand-500">{icon}</span>
+      <span>{value}</span>
+    </p>
   );
 }
 
@@ -502,6 +532,19 @@ function getStatusLabel(status: AttendanceStatus | undefined) {
   if (status === "excluded") return "서명 제외";
   if (status === "notTarget") return "비대상";
   return "처리 불가";
+}
+
+function formatAttendanceTime(value?: string) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+  return `${year}.${month}.${day} ${hours}:${minutes}`;
 }
 
 function InfoRow({ label, value }: { label: string; value: string }) {

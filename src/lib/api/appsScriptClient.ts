@@ -857,6 +857,7 @@ function normalizeAttendanceResult(row: RawRecord, fallbackEventId = "", fallbac
     eventId: asString(row.eventId, fallbackEventId),
     attendanceId: asString(row.attendanceId),
     status,
+    attendedAt: formatDisplayDate(asString(row.attendedAt ?? row["참석일시"])),
     completedCount: Number(row.completedCount ?? (status === "completed" ? 1 : 0)),
     skippedCount: Number(row.skippedCount ?? (status === "already" ? 1 : 0)),
     blockedCount: Number(row.blockedCount ?? (status === "notTarget" || status === "excluded" || status === "notFound" ? 1 : 0)),
