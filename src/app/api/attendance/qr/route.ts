@@ -12,14 +12,17 @@ export async function POST(request: Request) {
     department?: string;
     position?: string;
     signature?: string;
+    signatureDataUrl?: string;
   };
+
+  const signatureDataUrl = body.signatureDataUrl ?? body.signature;
 
   if (!body.staffId || (!body.eventId && !body.eventIds?.length && !body.groupId)) {
     return NextResponse.json({ message: "교육 정보와 교직원 정보가 필요합니다." }, { status: 400 });
   }
 
-  if (!body.signature) {
-    return NextResponse.json({ message: "전자서명이 필요합니다." }, { status: 400 });
+  if (!signatureDataUrl) {
+    return NextResponse.json({ message: "서명을 입력해주세요." }, { status: 400 });
   }
 
   try {
@@ -33,11 +36,15 @@ export async function POST(request: Request) {
       staffName: body.staffName,
       department: body.department,
       position: body.position,
-      signature: body.signature
+      signature: signatureDataUrl,
+      signatureDataUrl
     });
 
     if (!result.ok) {
-      return NextResponse.json({ message: result.message || "출석 정보를 저장하지 못했습니다. 잠시 후 다시 시도해주세요." }, { status: 400 });
+      return NextResponse.json(
+        { message: result.message || "출석 정보를 저장하지 못했습니다. 잠시 후 다시 시도해주세요." },
+        { status: 400 }
+      );
     }
 
     return NextResponse.json({
@@ -46,6 +53,9 @@ export async function POST(request: Request) {
       message: result.message
     });
   } catch {
-    return NextResponse.json({ message: "출석 정보를 저장하지 못했습니다. 잠시 후 다시 시도해주세요." }, { status: 502 });
+    return NextResponse.json(
+      { message: "출석 정보를 저장하지 못했습니다. 잠시 후 다시 시도해주세요." },
+      { status: 502 }
+    );
   }
 }

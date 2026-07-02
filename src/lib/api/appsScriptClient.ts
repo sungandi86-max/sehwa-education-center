@@ -14,6 +14,8 @@ import type {
   SubmitGroupAttendanceResult,
   SubmitAttendanceResult,
   SubmitQrAttendanceInput,
+  AttendanceReportResult,
+  AttendanceSummary,
   UploadCertificateInput,
   UploadCertificateResult
 } from "@/lib/api/appsScriptAdapter";
@@ -408,6 +410,7 @@ export const appsScriptClient = {
     department?: string;
     position?: string;
     signature?: string;
+    signatureDataUrl?: string;
   }): Promise<SubmitGroupAttendanceResult> {
     return appsScriptClient.submitQrAttendance({
       mode: "group",
@@ -417,7 +420,8 @@ export const appsScriptClient = {
       staffName: input.staffName,
       department: input.department,
       position: input.position,
-      signature: input.signature
+      signature: input.signature,
+      signatureDataUrl: input.signatureDataUrl ?? input.signature
     }) as Promise<SubmitGroupAttendanceResult>;
   },
   async uploadCertificate(input: UploadCertificateInput): Promise<UploadCertificateResult> {
@@ -484,6 +488,26 @@ export const appsScriptClient = {
     });
 
     return rows.map(normalizeCertificateUpload);
+  },
+  async getAttendanceSummary(eventId: string): Promise<AttendanceSummary> {
+    if (!APPS_SCRIPT_API_URL) {
+      return mockAppsScriptAdapter.getAttendanceSummary(eventId);
+    }
+
+    return postAppsScript<AttendanceSummary>({
+      action: "getAttendanceSummary",
+      eventId
+    });
+  },
+  async downloadAttendanceReport(eventId: string): Promise<AttendanceReportResult> {
+    if (!APPS_SCRIPT_API_URL) {
+      return mockAppsScriptAdapter.downloadAttendanceReport(eventId);
+    }
+
+    return postAppsScript<AttendanceReportResult>({
+      action: "downloadAttendanceReport",
+      eventId
+    });
   },
   getUploadStatus: mockAppsScriptAdapter.getUploadStatus.bind(mockAppsScriptAdapter)
 };
@@ -794,7 +818,8 @@ function createQrAttendancePayload(input: SubmitQrAttendanceInput): RawRecord {
     소속부서: input.department,
     직책: input.position,
     signatureStorage: "driveImage",
-    signature: input.signature
+    signature: input.signature,
+    signatureDataUrl: input.signatureDataUrl ?? input.signature
   };
 }
 

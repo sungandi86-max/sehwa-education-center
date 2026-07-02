@@ -35,6 +35,7 @@ export interface SubmitQrAttendanceInput {
   department?: string;
   position?: string;
   signature?: string;
+  signatureDataUrl?: string;
 }
 
 export type AppsScriptRequest =
@@ -51,13 +52,15 @@ export type AppsScriptRequest =
   | ({ action: "submitQrAttendance" } & SubmitQrAttendanceInput)
   | ({ action: "uploadCertificate" } & UploadCertificateInput)
   | { action: "getMyUploads"; staffId: string; query?: string; year?: string }
-  | { action: "getUploadStatus"; uploadId: string };
+  | { action: "getUploadStatus"; uploadId: string }
+  | { action: "getAttendanceSummary"; eventId: string }
+  | { action: "downloadAttendanceReport"; eventId: string };
 
 export interface SubmitAttendanceResult {
   ok: boolean;
   attendanceId?: string;
   message: string;
-  status?: "completed" | "already";
+  status?: "completed" | "already" | "notTarget" | "excluded" | "notFound";
   eventId?: string;
   signatureId?: string;
   signatureFileId?: string;
@@ -102,6 +105,41 @@ export interface UploadCertificateResult {
   message: string;
 }
 
+export type AttendanceReportStatus = "출석완료" | "미출석" | "서명제외" | "비대상" | "인정완료";
+
+export interface AttendanceSummaryRow {
+  no: number;
+  eventId: string;
+  staffId: string;
+  staffName: string;
+  department: string;
+  targetStatus: string;
+  attendanceStatus: AttendanceReportStatus;
+  attendedAt?: string;
+  exceptionReason?: string;
+  signatureId?: string;
+  signatureFileId?: string;
+  signatureImageUrl?: string;
+}
+
+export interface AttendanceSummary {
+  eventId: string;
+  trainingTitle: string;
+  targetCount: number;
+  attendedCount: number;
+  absentCount: number;
+  excludedCount: number;
+  recognizedCount: number;
+  attendanceRate: number;
+  rows: AttendanceSummaryRow[];
+}
+
+export interface AttendanceReportResult {
+  fileId: string;
+  fileUrl: string;
+  fileName: string;
+}
+
 export interface AppsScriptAdapter {
   request<T>(payload: AppsScriptRequest): Promise<T>;
   getAppConfig(): Promise<AppConfig>;
@@ -116,6 +154,8 @@ export interface AppsScriptAdapter {
   uploadCertificate(input: UploadCertificateInput): Promise<UploadCertificateResult>;
   getMyUploads(query: string, year?: number): Promise<CertificateUploadRow[]>;
   getUploadStatus(uploadId: string): Promise<CertificateUploadRow | undefined>;
+  getAttendanceSummary(eventId: string): Promise<AttendanceSummary>;
+  downloadAttendanceReport(eventId: string): Promise<AttendanceReportResult>;
 }
 
 export function createAppsScriptHttpAdapter(apiUrl = process.env.NEXT_PUBLIC_APPS_SCRIPT_API_URL ?? ""): AppsScriptAdapter {
@@ -154,6 +194,8 @@ export function createAppsScriptHttpAdapter(apiUrl = process.env.NEXT_PUBLIC_APP
     submitQrAttendance: (input) => post({ action: "submitQrAttendance", ...input }),
     uploadCertificate: (input) => post({ action: "uploadCertificate", ...input }),
     getMyUploads: (query, year) => post({ action: "getMyUploads", staffId: query, query, year: year ? String(year) : undefined }),
-    getUploadStatus: (uploadId) => post({ action: "getUploadStatus", uploadId })
+    getUploadStatus: (uploadId) => post({ action: "getUploadStatus", uploadId }),
+    getAttendanceSummary: (eventId) => post({ action: "getAttendanceSummary", eventId }),
+    downloadAttendanceReport: (eventId) => post({ action: "downloadAttendanceReport", eventId })
   };
 }
