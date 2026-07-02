@@ -1,24 +1,25 @@
 import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
 
 const statusClassMap: Record<string, string> = {
-  draft: "bg-slate-100 text-slate-700",
-  scheduled: "bg-sky-100 text-sky-800",
-  active: "bg-emerald-100 text-emerald-800",
-  completed: "bg-indigo-100 text-indigo-800",
-  archived: "bg-slate-200 text-slate-600",
-  제출완료: "bg-sky-100 text-sky-800",
-  확인중: "bg-amber-100 text-amber-800",
-  승인: "bg-emerald-100 text-emerald-800",
-  반려: "bg-rose-100 text-rose-800",
-  미이수: "bg-rose-100 text-rose-800",
-  pending: "bg-slate-100 text-slate-700",
-  extracted: "bg-emerald-100 text-emerald-800",
-  needReview: "bg-amber-100 text-amber-800",
-  failed: "bg-rose-100 text-rose-800",
-  완료: "bg-emerald-100 text-emerald-800",
-  대기: "bg-slate-100 text-slate-700",
-  생성중: "bg-sky-100 text-sky-800",
-  오류: "bg-rose-100 text-rose-800"
+  draft: "bg-slate-100 text-slate-600 ring-slate-200",
+  scheduled: "bg-brand-50 text-brand-700 ring-brand-100",
+  active: "bg-emerald-50 text-emerald-700 ring-emerald-100",
+  completed: "bg-softpurple-50 text-violet-700 ring-softpurple-100",
+  archived: "bg-slate-100 text-slate-500 ring-slate-200",
+  제출완료: "bg-brand-50 text-brand-700 ring-brand-100",
+  확인중: "bg-amber-50 text-amber-700 ring-amber-100",
+  승인: "bg-emerald-50 text-emerald-700 ring-emerald-100",
+  반려: "bg-rose-50 text-rose-700 ring-rose-100",
+  미이수: "bg-rose-50 text-rose-700 ring-rose-100",
+  pending: "bg-slate-100 text-slate-600 ring-slate-200",
+  extracted: "bg-emerald-50 text-emerald-700 ring-emerald-100",
+  needReview: "bg-amber-50 text-amber-700 ring-amber-100",
+  failed: "bg-rose-50 text-rose-700 ring-rose-100",
+  완료: "bg-emerald-50 text-emerald-700 ring-emerald-100",
+  대기: "bg-slate-100 text-slate-600 ring-slate-200",
+  생성중: "bg-brand-50 text-brand-700 ring-brand-100",
+  오류: "bg-rose-50 text-rose-700 ring-rose-100"
 };
 
 const statusLabelMap: Record<string, string> = {
@@ -43,13 +44,14 @@ export function PageHeader({
   action?: React.ReactNode;
 }) {
   return (
-    <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+    <div className="mb-8 flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
       <div>
-        <Link href="/" className="mb-3 inline-flex text-sm font-semibold text-slateblue-900 hover:text-brand-700">
-          ← 홈으로
+        <Link href="/" className="btn-secondary mb-5 w-fit px-4">
+          <ArrowLeft size={17} />
+          홈으로
         </Link>
-        <h2 className="text-2xl font-bold text-slateblue-900">{title}</h2>
-        {description ? <p className="mt-2 text-sm text-slate-600">{description}</p> : null}
+        <h2 className="text-3xl font-extrabold tracking-tight text-brand-900 md:text-4xl">{title}</h2>
+        {description ? <p className="mt-3 max-w-2xl text-base leading-7 text-slate-600">{description}</p> : null}
       </div>
       {action}
     </div>
@@ -58,17 +60,21 @@ export function PageHeader({
 
 export function StatCard({ label, value, helper }: { label: string; value: string | number; helper?: string }) {
   return (
-    <div className="rounded-md border border-slate-200 bg-white p-5 shadow-soft">
-      <p className="text-sm font-medium text-slate-500">{label}</p>
-      <p className="mt-3 text-3xl font-bold text-slateblue-900">{value}</p>
-      {helper ? <p className="mt-2 text-sm text-slate-500">{helper}</p> : null}
+    <div className="soft-card p-6">
+      <p className="text-sm font-bold text-slate-500">{label}</p>
+      <p className="mt-3 text-3xl font-extrabold text-brand-900">{value}</p>
+      {helper ? <p className="mt-2 text-sm leading-6 text-slate-500">{helper}</p> : null}
     </div>
   );
 }
 
 export function StatusBadge({ value }: { value: string }) {
   return (
-    <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${statusClassMap[value] ?? "bg-slate-100 text-slate-700"}`}>
+    <span
+      className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-bold ring-1 ${
+        statusClassMap[value] ?? "bg-slate-100 text-slate-600 ring-slate-200"
+      }`}
+    >
       {statusLabelMap[value] ?? value}
     </span>
   );
@@ -76,7 +82,7 @@ export function StatusBadge({ value }: { value: string }) {
 
 export function PrimaryLink({ href, children }: { href: string; children: React.ReactNode }) {
   return (
-    <Link href={href} className="focus-ring inline-flex items-center justify-center rounded-md bg-slateblue-900 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700">
+    <Link href={href} className="btn-primary">
       {children}
     </Link>
   );
@@ -84,7 +90,7 @@ export function PrimaryLink({ href, children }: { href: string; children: React.
 
 export function SecondaryLink({ href, children }: { href: string; children: React.ReactNode }) {
   return (
-    <Link href={href} className="focus-ring inline-flex items-center justify-center rounded-md border border-slateblue-900 bg-white px-4 py-2 text-sm font-semibold text-slateblue-900 hover:bg-brand-50">
+    <Link href={href} className="btn-secondary">
       {children}
     </Link>
   );
@@ -92,18 +98,18 @@ export function SecondaryLink({ href, children }: { href: string; children: Reac
 
 export function Panel({ title, children }: { title?: string; children: React.ReactNode }) {
   return (
-    <section className="rounded-md border border-slate-200 bg-white shadow-soft">
-      {title ? <div className="border-b border-slate-200 px-5 py-4 text-base font-bold text-slateblue-900">{title}</div> : null}
-      <div className="p-5">{children}</div>
+    <section className="quiet-card overflow-hidden">
+      {title ? <div className="border-b border-slateblue-100 px-6 py-5 text-lg font-extrabold text-brand-900">{title}</div> : null}
+      <div className="p-6">{children}</div>
     </section>
   );
 }
 
 export function EmptyState({ title, description }: { title: string; description: string }) {
   return (
-    <div className="rounded-md border border-dashed border-slate-300 bg-slate-50 p-6 text-center">
-      <p className="font-semibold text-slateblue-900">{title}</p>
-      <p className="mt-2 text-sm text-slate-500">{description}</p>
+    <div className="rounded-[22px] border border-dashed border-slateblue-100 bg-white/70 p-8 text-center">
+      <p className="font-bold text-brand-900">{title}</p>
+      <p className="mt-2 text-sm leading-6 text-slate-500">{description}</p>
     </div>
   );
 }

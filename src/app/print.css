@@ -1,0 +1,10 @@
+@media print {
+  .qr-print-page {
+    border: 0 !important;
+    box-shadow: none !important;
+  }
+
+  .print\:hidden {
+    display: none !important;
+  }
+}

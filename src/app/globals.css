@@ -4,8 +4,8 @@
 
 :root {
   color-scheme: light;
-  --background: #f5f8fb;
-  --foreground: #1f2d3a;
+  --background: #f7f9fc;
+  --foreground: #172033;
 }
 
 * {
@@ -16,6 +16,8 @@ body {
   margin: 0;
   background: var(--background);
   color: var(--foreground);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
 a {
@@ -32,6 +34,42 @@ textarea {
 
 .focus-ring {
   @apply focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2;
+}
+
+.soft-card {
+  @apply rounded-[32px] border border-slateblue-100 bg-white shadow-soft transition duration-[250ms] ease-out hover:-translate-y-1 hover:border-brand-900 hover:shadow-lift;
+}
+
+.quiet-card {
+  @apply rounded-[32px] border border-slateblue-100 bg-white shadow-soft;
+}
+
+.btn-primary {
+  @apply focus-ring inline-flex min-h-[52px] items-center justify-center gap-2 rounded-[16px] bg-gradient-to-r from-brand-900 via-brand-700 to-brand-500 px-5 py-3 text-sm font-semibold text-white shadow-[0_16px_34px_rgba(23,59,115,0.18)] transition duration-[250ms] ease-out hover:-translate-y-1 hover:brightness-110 disabled:cursor-not-allowed disabled:translate-y-0 disabled:from-slate-300 disabled:via-slate-300 disabled:to-slate-300 disabled:shadow-none;
+}
+
+.btn-secondary {
+  @apply focus-ring inline-flex min-h-[52px] items-center justify-center gap-2 rounded-[16px] border border-slateblue-100 bg-white px-5 py-3 text-sm font-semibold text-brand-900 shadow-[0_10px_24px_rgba(23,59,115,0.05)] transition duration-[250ms] ease-out hover:-translate-y-1 hover:border-brand-200 hover:bg-brand-50;
+}
+
+.input-soft {
+  @apply focus-ring min-h-11 rounded-2xl border border-slateblue-100 bg-white px-4 py-2.5 text-sm text-slateblue-900 shadow-sm placeholder:text-slate-400;
+}
+
+.animate-soft-in {
+  animation: soft-in 300ms ease-out both;
+}
+
+@keyframes soft-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.985);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 @media print {

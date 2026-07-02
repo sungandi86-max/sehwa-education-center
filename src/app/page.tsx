@@ -1,199 +1,139 @@
 import Link from "next/link";
+import { FileUp, QrCode, UserRound } from "lucide-react";
 import { BrandMark } from "@/components/brand-mark";
-import { HomeHeaderActions, MyTrainingActionCard, MyTrainingStatusCard } from "@/components/home-staff-widgets";
-import { StatusBadge } from "@/components/ui";
-import { appsScriptClient, formatDateTime, getTrainingTitle, type NoticeRow } from "@/lib/api/appsScriptClient";
-
-function PortalActionCard({
-  label,
-  title,
-  description,
-  status,
-  count,
-  button,
-  href
-}: {
-  label: string;
-  title: string;
-  description: string;
-  status: string;
-  count?: string | number;
-  button: string;
-  href: string;
-}) {
-  return (
-    <Link
-      href={href}
-      className="group flex min-h-56 flex-col rounded-md border border-slate-200 bg-white p-5 shadow-soft transition hover:border-brand-200 hover:bg-brand-50"
-    >
-      <p className="text-sm font-bold text-teal-700">{label}</p>
-      <h3 className="mt-2 text-xl font-bold text-slateblue-900">{title}</h3>
-      <p className="mt-3 text-sm leading-6 text-slate-600">{description}</p>
-      <div className="mt-auto border-t border-slate-200 pt-4">
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <p className="text-sm font-semibold text-slate-500">{status}</p>
-            {count !== undefined ? <p className="mt-1 text-xl font-bold text-slateblue-900">{count}건</p> : null}
-          </div>
-          <span className="rounded-md bg-slateblue-900 px-4 py-2 text-sm font-semibold text-white group-hover:bg-brand-700">
-            {button}
-          </span>
-        </div>
-      </div>
-    </Link>
-  );
-}
+import { appsScriptClient, type NoticeRow } from "@/lib/api/appsScriptClient";
 
 const noticeDate = (notice: NoticeRow) => notice.공지일 ?? notice.노출시작일 ?? "";
 
 export default async function PortalHomePage() {
-  const [notices, events, materials] = await Promise.all([
+  const [notices, trainings] = await Promise.all([
     appsScriptClient.getNotices(),
-    appsScriptClient.getTrainings(),
-    appsScriptClient.getMaterials()
+    appsScriptClient.getTrainings()
   ]);
-  const visibleNotices = notices
+
+  const mainNotice = notices
     .filter((notice) => notice.사용여부 !== "미사용" && notice.홈노출 !== "미사용")
-    .sort((a, b) => noticeDate(b).localeCompare(noticeDate(a)))
-    .slice(0, 3);
-  const openEvents = events
-    .filter((event) => event.상태 === "active" || event.상태 === "scheduled")
-    .sort((a, b) => a.시작일시.localeCompare(b.시작일시))
-    .slice(0, 3);
-  const recentMaterials = materials.slice(0, 3);
+    .sort((a, b) => noticeDate(b).localeCompare(noticeDate(a)))[0];
+  const openTrainingCount = trainings.filter((event) => event.상태 === "active" || event.상태 === "scheduled").length;
+
+  const portalCards = [
+    {
+      title: "QR 출석",
+      description: "교육 참석 및 전자서명",
+      detail: "교육장 QR을 스캔하고 서명까지 한 번에 완료합니다.",
+      status: `출석 가능 ${openTrainingCount}건`,
+      cta: "→ QR 출석하기",
+      href: "/qr",
+      icon: QrCode,
+      surface: "from-white via-[#FDFEFF] to-[#EEF7FF]",
+      iconTone: "bg-gradient-to-br from-[#EAF6FF] to-[#F8FCFF] text-brand-900 ring-[#D6EAFE]"
+    },
+    {
+      title: "이수증 제출",
+      description: "외부 연수 이수증 제출",
+      detail: "파일을 올리면 AI가 이수 정보를 먼저 확인합니다.",
+      status: "제출 상태 확인",
+      cta: "→ 이수증 제출하기",
+      href: "/upload",
+      icon: FileUp,
+      surface: "from-white via-[#FFFDFF] to-[#F5F0FF]",
+      iconTone: "bg-gradient-to-br from-[#F0E9FF] to-[#FEFCFF] text-brand-900 ring-[#E4D9FF]"
+    },
+    {
+      title: "내 이수현황 확인",
+      description: "이수 내역 및 제출 상태 조회",
+      detail: "성명으로 조회하고 올해 연수 이수 상태를 확인합니다.",
+      status: "성명 조회",
+      cta: "→ 내 이수현황 보기",
+      href: "/my",
+      icon: UserRound,
+      surface: "from-white via-[#FDFFFE] to-[#ECF8F3]",
+      iconTone: "bg-gradient-to-br from-[#E6F7F0] to-[#FBFFFD] text-brand-900 ring-[#D7EEE4]"
+    }
+  ];
 
   return (
-    <div className="space-y-5">
-      <section className="border-b border-slate-200 bg-white px-5 py-4 md:px-6">
-        <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-          <div>
-            <BrandMark />
-            <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-600">
-              교직원 교육·연수 출석, 이수 확인, 이수증 제출을 한 곳에서 확인합니다.
-            </p>
+    <main className="mx-auto flex min-h-[calc(100vh-5rem)] max-w-5xl flex-col justify-center py-8 md:py-10">
+      <div className="space-y-11 md:space-y-14">
+        <section className="quiet-card overflow-hidden shadow-[0_22px_64px_rgba(23,59,115,0.065),0_6px_18px_rgba(23,59,115,0.035)]">
+          <div className="bg-gradient-to-br from-white via-white to-brand-50/70 p-7 md:p-9">
+            <div>
+                <BrandMark />
+                <p className="mt-5 text-sm font-semibold text-brand-600">오늘 필요한 연수 업무를 차분하게 처리하세요.</p>
+                <p className="mt-2 max-w-2xl text-base font-medium leading-7 text-slate-600">
+                  QR 출석, 이수증 제출, 내 이수현황 확인을 한 곳에서 이용하세요.
+                </p>
+            </div>
           </div>
-          <HomeHeaderActions />
-        </div>
-      </section>
+        </section>
 
-      <section className="rounded-md border border-teal-100 bg-teal-50 px-5 py-3 text-sm leading-6 text-slate-700">
-        <p className="font-bold text-slateblue-900">공지사항</p>
-        {visibleNotices.length > 0 ? (
-          <div className="mt-1 space-y-1">
-            {visibleNotices.map((notice) => (
-              <p key={notice.noticeId}>
-                <span className="font-semibold text-slateblue-900">{notice.제목}</span>
-                {notice.내용 ? <span className="ml-2">{notice.내용}</span> : null}
-              </p>
-            ))}
-          </div>
-        ) : (
-          <p className="mt-1">등록된 공지사항이 없습니다.</p>
-        )}
-      </section>
-
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <PortalActionCard
-          label="QR 출석"
-          title="QR 출석"
-          description="오늘 진행 중인 교육에 QR로 출석합니다."
-          status="오늘 출석 가능한 교육"
-          count={openEvents.length}
-          button="출석하기"
-          href="/qr"
-        />
-        <MyTrainingActionCard />
-        <PortalActionCard
-          label="이수증 제출"
-          title="이수증 제출"
-          description="외부 연수 또는 온라인 연수 이수증을 제출합니다."
-          status="제출 상태 확인 가능"
-          button="제출하기"
-          href="/upload"
-        />
-        <PortalActionCard
-          label="교육자료"
-          title="교육자료"
-          description="교육자료와 안내 링크를 확인합니다."
-          status="자료"
-          count={materials.length}
-          button="자료보기"
-          href="/materials"
-        />
-      </section>
-
-      <section className="grid gap-5 xl:grid-cols-[1.15fr_0.85fr]">
-        <div className="rounded-md border border-slate-200 bg-white p-5 shadow-soft">
-          <div className="mb-4">
-            <h2 className="text-xl font-bold text-slateblue-900">오늘·진행 중 교육</h2>
-            <p className="mt-1 text-sm text-slate-500">오늘 또는 진행 중인 교육을 최대 3건까지 표시합니다.</p>
-          </div>
-          <div className="space-y-3">
-            {openEvents.map((event) => (
-              <div
-                key={event.eventId}
-                className="flex flex-col gap-3 rounded-md border border-slate-200 bg-slate-50 px-4 py-3 md:flex-row md:items-center md:justify-between"
-              >
-                <div className="flex min-w-0 gap-3">
-                  <StatusBadge value={event.상태} />
-                  <div className="min-w-0">
-                    <p className="font-bold text-slateblue-900">{event.제목}</p>
-                    <p className="mt-1 text-sm text-slate-500">
-                      {formatDateTime(event.시작일시)} · {event.장소} · {event.담당부서}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex shrink-0 flex-wrap gap-2">
-                  <Link
-                    href={`/qr/${event.eventId}`}
-                    className="rounded-md bg-slateblue-900 px-4 py-2 text-center text-sm font-semibold text-white hover:bg-brand-700"
-                  >
-                    QR 출석
-                  </Link>
-                  <Link
-                    href={`/print/qr/${event.eventId}`}
-                    className="rounded-md border border-slateblue-900 bg-white px-4 py-2 text-center text-sm font-semibold text-slateblue-900 hover:bg-brand-50"
-                  >
-                    QR 출력
-                  </Link>
-                </div>
+        <section className="rounded-[30px] border border-brand-100 bg-gradient-to-r from-brand-50/85 via-white to-softpurple-50/85 px-6 py-5 shadow-[0_18px_48px_rgba(23,59,115,0.045)] md:px-7">
+          <div className="flex flex-col gap-2 md:flex-row md:items-center md:gap-4">
+            <p className="shrink-0 text-xs font-semibold uppercase tracking-[0.18em] text-brand-600">공지사항</p>
+            {mainNotice ? (
+              <div className="min-w-0">
+                <h2 className="truncate text-base font-semibold text-brand-900 md:text-lg">{mainNotice.제목}</h2>
+                {mainNotice.내용 ? <p className="mt-1 line-clamp-1 text-sm font-medium text-slate-600">{mainNotice.내용}</p> : null}
               </div>
-            ))}
+            ) : (
+              <p className="text-sm font-medium text-slate-500">현재 표시할 공지사항이 없습니다.</p>
+            )}
           </div>
-        </div>
+        </section>
 
-        <MyTrainingStatusCard />
-      </section>
-
-      <section className="rounded-md border border-slate-200 bg-white p-5 shadow-soft">
-        <div className="mb-4 flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
-          <div>
-            <h2 className="text-xl font-bold text-slateblue-900">최근 교육자료</h2>
-            <p className="mt-1 text-sm text-slate-500">자주 찾는 자료와 최근 등록 자료입니다.</p>
-          </div>
-          <Link
-            href="/materials"
-            className="rounded-md border border-slateblue-900 bg-white px-4 py-2 text-sm font-semibold text-slateblue-900 hover:bg-brand-50"
-          >
-            자료 링크 전체 보기
-          </Link>
-        </div>
-        <div className="grid gap-3 md:grid-cols-3">
-          {recentMaterials.map((material) => (
-            <Link
-              key={material.materialId}
-              href="/materials"
-              className="rounded-md border border-slate-200 bg-slate-50 p-4 hover:border-brand-200 hover:bg-brand-50"
-            >
-              <p className="font-bold text-slateblue-900">{material.제목}</p>
-              <p className="mt-2 text-sm text-slate-500">{getTrainingTitle(material.eventId, events)}</p>
-              <div className="mt-4 border-t border-slate-200 pt-3">
-                <span className="rounded-md bg-slateblue-900 px-3 py-2 text-sm font-semibold text-white">자료보기</span>
-              </div>
-            </Link>
+        <section className="grid gap-4 md:grid-cols-3">
+          {portalCards.map((card) => (
+            <PortalCard key={card.href} {...card} />
           ))}
+        </section>
+      </div>
+    </main>
+  );
+}
+
+function PortalCard({
+  title,
+  description,
+  detail,
+  status,
+  cta,
+  href,
+  icon: Icon,
+  surface,
+  iconTone
+}: {
+  title: string;
+  description: string;
+  detail: string;
+  status: string;
+  cta: string;
+  href: string;
+  icon: typeof QrCode;
+  surface: string;
+  iconTone: string;
+}) {
+  return (
+    <Link
+      href={href}
+      className={`group relative flex min-h-64 flex-col overflow-hidden rounded-[32px] border border-slateblue-100 bg-gradient-to-br ${surface} p-7 shadow-[0_24px_72px_rgba(23,59,115,0.07),0_6px_18px_rgba(23,59,115,0.035)] transition duration-[250ms] ease-out hover:-translate-y-1 hover:border-brand-900 hover:shadow-lift md:min-h-72 md:p-8`}
+    >
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-28 bg-white/30" />
+      <div className="relative flex items-start justify-between gap-4">
+        <div className={`flex size-16 shrink-0 items-center justify-center rounded-[22px] ring-1 shadow-[0_14px_32px_rgba(23,59,115,0.075)] transition duration-[250ms] ease-out group-hover:scale-[1.035] group-hover:bg-white ${iconTone}`}>
+          <Icon size={33} strokeWidth={1.7} />
         </div>
-      </section>
-    </div>
+        <span className="rounded-full bg-white/78 px-3 py-1 text-xs font-semibold text-brand-700 shadow-[0_8px_18px_rgba(23,59,115,0.035)] ring-1 ring-white/90">
+          {status}
+        </span>
+      </div>
+
+      <div className="relative mt-7 min-w-0">
+        <h2 className="text-[1.72rem] font-semibold leading-tight tracking-tight text-brand-900">{title}</h2>
+        <p className="mt-3 text-base font-medium leading-6 text-slate-600">{description}</p>
+        <p className="mt-4 text-[0.95rem] font-normal leading-7 text-slate-500">{detail}</p>
+      </div>
+
+      <p className="relative mt-auto pt-7 text-sm font-semibold text-brand-900 transition duration-[250ms] ease-out group-hover:translate-x-1">{cta}</p>
+    </Link>
   );
 }

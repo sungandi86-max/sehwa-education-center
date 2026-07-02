@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ArrowLeft, Printer } from "lucide-react";
 import { BrandMark } from "@/components/brand-mark";
 import { PrintPageButton } from "@/components/print-page-button";
 import { QrDisplayCode } from "@/components/qr-display-code";
@@ -34,29 +35,26 @@ export default async function QrPrintPage({ params }: { params: Promise<{ eventI
   const attendanceUrl = `${PRODUCTION_ORIGIN}/qr/${event.eventId}`;
 
   return (
-    <div className="mx-auto min-h-[calc(100vh-3rem)] max-w-4xl rounded-md bg-white p-5 shadow-soft print:min-h-0 print:max-w-none print:rounded-none print:p-0 print:shadow-none">
-      <div className="mb-4 flex items-center justify-between gap-3 print:hidden">
-        <Link
-          href="/"
-          className="rounded-md border border-slateblue-900 bg-white px-4 py-2 text-sm font-semibold text-slateblue-900 hover:bg-brand-50"
-        >
-          ← 홈으로
+    <div className="mx-auto max-w-4xl print:max-w-none">
+      <div className="mb-5 flex items-center justify-between gap-3 print:hidden">
+        <Link href="/" className="btn-secondary">
+          <ArrowLeft size={17} />
+          홈으로
         </Link>
         <PrintPageButton />
       </div>
 
-      <article className="mx-auto flex min-h-[270mm] max-w-[190mm] flex-col rounded-md border border-slate-200 bg-white px-8 py-8 text-center print:min-h-[273mm] print:max-w-none print:border-0 print:px-0 print:py-0">
-        <header className="border-b border-slate-200 pb-6">
+      <article className="qr-print-page mx-auto flex min-h-[270mm] max-w-[190mm] flex-col bg-white px-8 py-8 text-center shadow-soft print:min-h-[273mm] print:max-w-none print:px-0 print:py-0 print:shadow-none">
+        <header className="border-b border-slateblue-100 pb-7">
           <div className="flex justify-center">
             <BrandMark />
           </div>
-          <h1 className="mt-7 text-3xl font-bold leading-tight text-slateblue-900">{event.제목}</h1>
-          <div className="mt-5 grid gap-2 text-base font-semibold text-slate-600">
+          <h1 className="mt-8 text-3xl font-extrabold leading-tight text-brand-900">{event.제목}</h1>
+          <div className="mt-5 grid gap-2 text-base font-bold text-slate-600">
             <p>
               {formatDateOnly(event.시작일시)} {formatTimeOnly(event.시작일시)} - {formatTimeOnly(event.종료일시)}
             </p>
             <p>{event.장소}</p>
-            <p>{event.담당부서}</p>
           </div>
         </header>
 
@@ -64,14 +62,17 @@ export default async function QrPrintPage({ params }: { params: Promise<{ eventI
           <div className="w-full max-w-[118mm] print:max-w-[120mm]">
             <QrDisplayCode value={attendanceUrl} large />
           </div>
-          <p className="mt-8 break-all text-sm font-semibold text-slate-500 print:text-xs">{attendanceUrl}</p>
         </section>
 
-        <footer className="border-t border-slate-200 pt-7">
-          <p className="text-3xl font-bold leading-snug text-slateblue-900">
+        <footer className="border-t border-slateblue-100 pt-7">
+          <p className="text-3xl font-extrabold leading-snug text-brand-900">
             휴대폰 카메라로 QR을 스캔하여
             <br />
             출석해주세요.
+          </p>
+          <p className="mt-5 inline-flex items-center gap-2 rounded-full bg-brand-50 px-4 py-2 text-sm font-bold text-brand-900 print:hidden">
+            <Printer size={16} />
+            Ctrl+P로 바로 인쇄할 수 있습니다.
           </p>
         </footer>
       </article>

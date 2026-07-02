@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import "./print.css";
 import { AppShell } from "@/components/app-shell";
 import { StaffSessionProvider } from "@/components/staff-session-provider";
 import { APP_CONFIG } from "@/lib/config";
