@@ -12,6 +12,8 @@ import { lookupMyTrainingStatus } from "@/lib/my-training-lookup";
 import type {
   AppsScriptAdapter,
   AppsScriptRequest,
+  AttendanceEligibilityResult,
+  CheckAttendanceEligibilityInput,
   AttendanceReportResult,
   AttendanceSummary,
   SubmitAttendanceResult,
@@ -98,6 +100,8 @@ export const mockAppsScriptAdapter: AppsScriptAdapter = {
         }) as Promise<T>;
       case "getMyTrainingHistory":
         return this.getMyTrainingHistory(payload.staffId || payload.query || "", Number(payload.year)) as Promise<T>;
+      case "checkAttendanceEligibility":
+        return this.checkAttendanceEligibility(payload) as Promise<T>;
       case "submitQrAttendance":
         return this.submitQrAttendance(payload) as Promise<T>;
       case "uploadCertificate":
@@ -183,6 +187,46 @@ export const mockAppsScriptAdapter: AppsScriptAdapter = {
       staff: matchedStaff,
       completions: createCompletionHistory().filter((row) => getStaffId(row) === staffId && eventIds.includes(row.eventId)),
       uploads: certificateUploads.filter((row) => getStaffId(row) === staffId && eventIds.includes(row.eventId))
+    };
+  },
+
+  async checkAttendanceEligibility(input: CheckAttendanceEligibilityInput): Promise<AttendanceEligibilityResult> {
+    const eventIds = input.mode === "group" ? input.eventIds ?? [] : input.eventId ? [input.eventId] : [];
+    const results = eventIds.map((eventId) => {
+      const duplicated = mockAttendances.find((row) => row.eventId === eventId && getStaffId(row) === input.staffId);
+
+      if (duplicated) {
+        return {
+          eventId,
+          trainingTitle: getTrainingTitle(eventId),
+          eligible: false,
+          status: "already_attended" as const,
+          attendanceId: duplicated.attendanceId,
+          message: "이미 출석 처리되었습니다."
+        };
+      }
+
+      return {
+        eventId,
+        trainingTitle: getTrainingTitle(eventId),
+        eligible: true,
+        status: "can_sign" as const,
+        message: "전자서명이 필요합니다."
+      };
+    });
+    const canSignCount = results.filter((result) => result.status === "can_sign").length;
+    const alreadyCount = results.filter((result) => result.status === "already_attended").length;
+
+    return {
+      eligible: canSignCount > 0,
+      status: canSignCount > 0 ? "can_sign" : "already_attended",
+      message: canSignCount > 0 ? "전자서명이 필요합니다." : "이미 출석 처리되었습니다.",
+      canSignCount,
+      alreadyCount,
+      notTargetCount: 0,
+      excludedCount: 0,
+      blockedCount: 0,
+      results
     };
   },
 

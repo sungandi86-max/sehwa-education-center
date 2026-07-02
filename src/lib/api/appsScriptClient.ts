@@ -14,6 +14,8 @@ import type {
   SubmitGroupAttendanceResult,
   SubmitAttendanceResult,
   SubmitQrAttendanceInput,
+  CheckAttendanceEligibilityInput,
+  AttendanceEligibilityResult,
   AttendanceReportResult,
   AttendanceSummary,
   UploadCertificateInput,
@@ -383,6 +385,16 @@ export const appsScriptClient = {
     }
 
     return data;
+  },
+  async checkAttendanceEligibility(input: CheckAttendanceEligibilityInput): Promise<AttendanceEligibilityResult> {
+    if (!APPS_SCRIPT_API_URL) {
+      return mockAppsScriptAdapter.checkAttendanceEligibility(input);
+    }
+
+    return postAppsScript<AttendanceEligibilityResult>({
+      action: "checkAttendanceEligibility",
+      ...input
+    });
   },
   async submitQrAttendance(input: SubmitQrAttendanceInput): Promise<SubmitAttendanceResult | SubmitGroupAttendanceResult> {
     if (!APPS_SCRIPT_API_URL) {

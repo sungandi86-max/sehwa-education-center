@@ -15,17 +15,35 @@ export interface QrAttendanceEventInfo {
   department: string;
 }
 
-type FlowStep = "confirm" | "signature" | "saving" | "done";
+type FlowStep = "confirm" | "checking" | "signature" | "saving" | "done";
+type AttendanceStatus = "completed" | "already" | "notTarget" | "excluded" | "notFound";
+type EligibilityStatus = "can_sign" | "already_attended" | "not_target" | "signature_excluded";
 
 interface AttendanceResult {
   message?: string;
-  status?: "completed" | "already" | "notTarget" | "excluded" | "notFound";
+  status?: AttendanceStatus;
   completedCount?: number;
   skippedCount?: number;
   blockedCount?: number;
   results?: {
     eventId?: string;
-    status?: "completed" | "already" | "notTarget" | "excluded" | "notFound";
+    status?: AttendanceStatus;
+    message?: string;
+  }[];
+}
+
+interface EligibilityResult {
+  eligible: boolean;
+  status: EligibilityStatus;
+  message: string;
+  canSignCount: number;
+  alreadyCount: number;
+  notTargetCount: number;
+  excludedCount: number;
+  blockedCount: number;
+  results?: {
+    eventId?: string;
+    status?: EligibilityStatus;
     message?: string;
   }[];
 }
@@ -48,14 +66,55 @@ export function QrAttendanceConfirm({
   const [message, setMessage] = useState("");
   const [result, setResult] = useState<AttendanceResult | null>(null);
 
-  const goToSignature = () => {
+  const goToSignature = async () => {
     if (!staff) {
       setIsLookupOpen(true);
       return;
     }
 
     setMessage("");
-    setStep("signature");
+    setStep("checking");
+
+    try {
+      const response = await fetch("/api/attendance/check", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          mode: isGroup ? "group" : "single",
+          eventId: isGroup ? undefined : attendanceEvents[0]?.eventId,
+          eventIds: isGroup ? attendanceEvents.map((item) => item.eventId) : undefined,
+          groupId,
+          staffId: staff.staffId
+        })
+      });
+      const payload = (await response.json()) as EligibilityResult & { message?: string };
+
+      if (!response.ok) {
+        throw new Error(payload.message ?? "출석 가능 여부를 확인하지 못했습니다.");
+      }
+
+      if (payload.status === "can_sign" && payload.canSignCount > 0) {
+        setMessage("");
+        setStep("signature");
+        return;
+      }
+
+      setResult(createResultFromEligibility(payload));
+      setMessage(payload.message);
+      setStep("done");
+    } catch (error) {
+      setResult({
+        message: error instanceof Error ? error.message : "출석 가능 여부를 확인하지 못했습니다.",
+        status: "notFound",
+        completedCount: 0,
+        skippedCount: 0,
+        blockedCount: 1
+      });
+      setMessage(error instanceof Error ? error.message : "출석 가능 여부를 확인하지 못했습니다.");
+      setStep("done");
+    }
   };
 
   const submitAttendance = async () => {
@@ -122,6 +181,7 @@ export function QrAttendanceConfirm({
           onContinue={goToSignature}
         />
       ) : null}
+      {step === "checking" ? <CheckingScreen /> : null}
       {step === "signature" ? (
         <SignatureScreen
           isGroup={isGroup}
@@ -140,6 +200,29 @@ export function QrAttendanceConfirm({
       {isLookupOpen ? <MyTrainingLookupModal onClose={() => setIsLookupOpen(false)} /> : null}
     </>
   );
+}
+
+function createResultFromEligibility(payload: EligibilityResult): AttendanceResult {
+  const statusMap: Record<EligibilityStatus, AttendanceStatus> = {
+    can_sign: "completed",
+    already_attended: "already",
+    not_target: "notTarget",
+    signature_excluded: "excluded"
+  };
+  const results = payload.results?.map((item) => ({
+    eventId: item.eventId,
+    status: item.status ? statusMap[item.status] : statusMap[payload.status],
+    message: item.message
+  }));
+
+  return {
+    message: payload.message,
+    status: statusMap[payload.status],
+    completedCount: 0,
+    skippedCount: payload.alreadyCount,
+    blockedCount: payload.notTargetCount + payload.excludedCount,
+    results
+  };
 }
 
 function AttendanceConfirmScreen({
@@ -277,10 +360,12 @@ function SignatureScreen({
 
       {message ? <p className="mt-6 rounded-2xl bg-rose-50 p-3 text-sm font-semibold text-rose-700">{message}</p> : null}
 
-      <button type="button" onClick={onSubmit} disabled={!signature} className="btn-primary mt-8 min-h-14 w-full">
+      <div className="sticky bottom-4 z-10 mt-8 rounded-[24px] bg-white/90 pb-[env(safe-area-inset-bottom)] pt-3 backdrop-blur">
+      <button type="button" onClick={onSubmit} disabled={!signature} className="btn-primary min-h-14 w-full shadow-lift">
         <PenLine size={17} />
         서명 완료 및 저장
       </button>
+      </div>
     </section>
   );
 }
@@ -293,6 +378,18 @@ function SavingScreen() {
       </div>
       <h2 className="mt-6 text-2xl font-semibold text-brand-900">출석 정보를 저장하고 있습니다...</h2>
       <p className="mt-3 text-sm leading-7 text-slate-500">잠시만 기다려주세요.</p>
+    </section>
+  );
+}
+
+function CheckingScreen() {
+  return (
+    <section className="quiet-card animate-soft-in p-8 text-center">
+      <div className="mx-auto flex size-20 items-center justify-center rounded-full bg-brand-50 text-brand-900">
+        <LoaderCircle size={38} className="animate-spin" />
+      </div>
+      <h2 className="mt-6 text-2xl font-semibold text-brand-900">출석 가능 여부를 확인하고 있습니다...</h2>
+      <p className="mt-3 text-sm leading-7 text-slate-500">대상 여부와 중복 출석을 먼저 확인합니다.</p>
     </section>
   );
 }
@@ -312,6 +409,8 @@ function DoneScreen({
   const skippedCount = result?.skippedCount ?? (result?.status === "already" ? 1 : 0);
   const blockedCount = result?.blockedCount ?? (result?.status === "notTarget" || result?.status === "excluded" || result?.status === "notFound" ? 1 : 0);
   const resultByEventId = new Map((result?.results ?? []).map((item) => [item.eventId, item]));
+  const title = getDoneTitle(result?.status, completedCount, skippedCount, blockedCount);
+  const showCounts = completedCount > 0 || skippedCount > 0;
 
   return (
     <section className="quiet-card animate-soft-in overflow-hidden text-center">
@@ -319,7 +418,7 @@ function DoneScreen({
         <div className="mx-auto flex size-20 items-center justify-center rounded-full bg-white text-emerald-600 shadow-soft">
           <CheckCircle2 size={42} />
         </div>
-        <h2 className="mt-6 text-3xl font-semibold text-brand-900">출석이 완료되었습니다.</h2>
+        <h2 className="mt-6 text-3xl font-semibold text-brand-900">{title}</h2>
         <p className="mt-3 text-base font-medium leading-7 text-slate-600">
           {staffName} 선생님, 감사합니다.
           <br />
@@ -328,17 +427,19 @@ function DoneScreen({
       </div>
 
       <div className="p-6">
-        <div className="grid gap-3 sm:grid-cols-3">
-          <ResultCount label="완료" value={completedCount} tone="text-emerald-700" />
-          <ResultCount label="이미 출석" value={skippedCount} tone="text-amber-700" />
-          <ResultCount label="처리 불가" value={blockedCount} tone="text-rose-700" />
-        </div>
+        {showCounts ? (
+          <div className="grid gap-3 sm:grid-cols-3">
+            <ResultCount label="완료" value={completedCount} tone="text-emerald-700" />
+            <ResultCount label="이미 출석" value={skippedCount} tone="text-amber-700" />
+            <ResultCount label="처리 불가" value={blockedCount} tone="text-rose-700" />
+          </div>
+        ) : null}
 
         <div className="mt-5 space-y-3 text-left">
           {events.map((event) => {
             const eventResult = resultByEventId.get(event.eventId);
             const status = eventResult?.status ?? result?.status;
-            const statusLabel = status === "already" ? "이미 출석" : status === "completed" ? "완료" : "처리됨";
+            const statusLabel = getStatusLabel(status);
             const statusClass =
               status === "already"
                 ? "bg-amber-50 text-amber-700 ring-amber-100"
@@ -385,6 +486,22 @@ function ResultCount({ label, value, tone }: { label: string; value: number; ton
       <p className={`mt-1 text-3xl font-semibold ${tone}`}>{value}건</p>
     </div>
   );
+}
+
+function getDoneTitle(status: AttendanceStatus | undefined, completedCount: number, skippedCount: number, blockedCount: number) {
+  if (completedCount > 0) return "출석이 완료되었습니다.";
+  if (skippedCount > 0 && blockedCount === 0) return "이미 출석 처리되었습니다.";
+  if (status === "notTarget") return "이 교육의 대상자가 아닙니다.";
+  if (status === "excluded") return "사전 서명 제외 대상입니다.";
+  return "출석 처리 결과";
+}
+
+function getStatusLabel(status: AttendanceStatus | undefined) {
+  if (status === "already") return "이미 출석";
+  if (status === "completed") return "완료";
+  if (status === "excluded") return "서명 제외";
+  if (status === "notTarget") return "비대상";
+  return "처리 불가";
 }
 
 function InfoRow({ label, value }: { label: string; value: string }) {
@@ -484,6 +601,10 @@ function SignaturePad({ onChange }: { onChange: (value: string) => void }) {
   };
 
   const clear = () => {
+    if (!window.confirm("작성한 서명을 지울까요?")) {
+      return;
+    }
+
     const canvas = canvasRef.current;
     const context = canvas?.getContext("2d");
     if (!canvas || !context) {

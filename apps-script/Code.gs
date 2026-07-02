@@ -50,6 +50,8 @@ function doPost(e) {
         return jsonOutput(getMyTrainingHistory(req));
       case "getMyUploads":
         return jsonOutput(getMyUploads(req));
+      case "checkAttendanceEligibility":
+        return jsonOutput(checkAttendanceEligibility(req));
       case "submitQrAttendance":
         return jsonOutput(submitQrAttendance(req));
       case "uploadCertificate":
@@ -257,6 +259,111 @@ function getMyUploads(req) {
   return { success: true, data: rows };
 }
 
+function checkAttendanceEligibility(req) {
+  const mode = req.mode === "group" || req.groupId || req.eventIds ? "group" : "single";
+  const staffId = String(req.staffId || req["교직원ID"] || "").trim();
+  const eventIds = mode === "group" ? getSubmitEventIds(req) : [String(req.eventId || "").trim()].filter(Boolean);
+
+  if (!staffId) {
+    return { success: false, message: "교직원ID가 필요합니다." };
+  }
+
+  if (eventIds.length === 0) {
+    return { success: false, message: "교육 정보를 찾을 수 없습니다." };
+  }
+
+  const results = eventIds.map((eventId) => decisionToEligibilityResult(getAttendanceDecision(eventId, staffId)));
+  const canSignCount = results.filter((result) => result.status === "can_sign").length;
+  const alreadyCount = results.filter((result) => result.status === "already_attended").length;
+  const notTargetCount = results.filter((result) => result.status === "not_target").length;
+  const excludedCount = results.filter((result) => result.status === "signature_excluded").length;
+  const blockedCount = notTargetCount + excludedCount;
+  const status = canSignCount > 0
+    ? "can_sign"
+    : alreadyCount > 0 && alreadyCount === results.length
+      ? "already_attended"
+      : excludedCount > 0 && excludedCount === results.length
+        ? "signature_excluded"
+        : notTargetCount > 0 && notTargetCount === results.length
+          ? "not_target"
+          : "not_target";
+  const message = getEligibilityMessage(status, canSignCount, alreadyCount, blockedCount);
+
+  return {
+    success: true,
+    message,
+    data: {
+      eligible: status === "can_sign",
+      status,
+      message,
+      canSignCount,
+      alreadyCount,
+      notTargetCount,
+      excludedCount,
+      blockedCount,
+      results
+    }
+  };
+}
+
+function decisionToEligibilityResult(decision) {
+  const result = decision.result || {};
+  const event = getTrainingByEventId(decision.eventId) || {};
+  const title = stringOf(event, ["교육명", "제목", "title"], decision.eventId);
+
+  if (decision.status === "ready") {
+    return {
+      eventId: decision.eventId,
+      trainingTitle: title,
+      eligible: true,
+      status: "can_sign",
+      message: "전자서명이 필요합니다."
+    };
+  }
+
+  if (decision.status === "already") {
+    return {
+      eventId: decision.eventId,
+      trainingTitle: title,
+      eligible: false,
+      status: "already_attended",
+      attendanceId: result.attendanceId || "",
+      message: "이미 출석 처리되었습니다."
+    };
+  }
+
+  if (decision.status === "excluded") {
+    return {
+      eventId: decision.eventId,
+      trainingTitle: title,
+      eligible: false,
+      status: "signature_excluded",
+      message: "사전 서명 제외 대상입니다."
+    };
+  }
+
+  return {
+    eventId: decision.eventId,
+    trainingTitle: title,
+    eligible: false,
+    status: "not_target",
+    message: result.message || "이 교육의 대상자가 아닙니다."
+  };
+}
+
+function getEligibilityMessage(status, canSignCount, alreadyCount, blockedCount) {
+  if (status === "can_sign") {
+    if (alreadyCount > 0 || blockedCount > 0) {
+      return "전자서명이 필요한 교육만 출석 처리합니다.";
+    }
+    return "전자서명이 필요합니다.";
+  }
+
+  if (status === "already_attended") return "이미 출석 처리되었습니다.";
+  if (status === "signature_excluded") return "사전 서명 제외 대상입니다.";
+  return "이 교육의 대상자가 아닙니다.";
+}
+
 function submitQrAttendance(req) {
   const mode = req.mode === "group" ? "group" : "single";
   const staffId = String(req.staffId || req["교직원ID"] || "").trim();
@@ -446,14 +553,13 @@ function saveSignatureImage(req, staffId, eventIds, signatureDataUrl) {
   const timestamp = Utilities.formatDate(now, Session.getScriptTimeZone(), "yyyyMMdd_HHmmss");
   const year = Utilities.formatDate(now, Session.getScriptTimeZone(), "yyyy");
   const firstEvent = getTrainingByEventId(eventIds[0]) || {};
-  const eventName = sanitizeFileName(stringOf(firstEvent, ["교육명", "제목", "title"], eventIds[0]));
   const targetKey = req.groupId || req.eventGroupId || eventIds[0];
   const signatureId = "SIG-" + staffId + "-" + targetKey + "-" + timestamp;
   const fileName = "signature_" + sanitizeFileName(staffId) + "_" + sanitizeFileName(targetKey) + "_" + timestamp + ".png";
 
   const folder = getOrCreateFolder(
     getOrCreateFolder(getOrCreateFolder(getDriveRootFolder(), SIGNATURE_FOLDER), year),
-    eventName || eventIds[0]
+    sanitizeFileName(eventIds[0])
   );
   const blob = Utilities.newBlob(bytes, "image/png", fileName);
   const file = folder.createFile(blob);
@@ -681,13 +787,20 @@ function isEligibleTrainingTarget(event, targetRows, target, staff) {
   const department = stringOf(staff, ["소속부서", "부서", "department"]);
   const position = stringOf(staff, ["직책", "직위", "position"]);
   const staffStatus = stringOf(staff, ["재직상태", "status"], "재직");
+  const submissionTarget = stringOf(staff, ["제출대상", "교육제출대상", "targetSubmission"], "대상");
+  const isActive = staffStatus !== "퇴직" && staffStatus !== "퇴사";
+  const isSubmissionTarget = submissionTarget === "" || submissionTarget === "대상" || submissionTarget.toLowerCase() === "true";
+  const isTeacher = position.indexOf("교사") >= 0 || position.indexOf("교원") >= 0 || position.indexOf("보건교사") >= 0 || position.indexOf("기간제") >= 0;
+  const isStaff = position.indexOf("행정") >= 0 || position.indexOf("공무직") >= 0 || position.indexOf("직원") >= 0 || position.indexOf("실무") >= 0;
 
   if (!targetText && targetRows.length === 0) return true;
   if (normalizedTarget.indexOf("전교직원") >= 0 || normalizedTarget.indexOf("전체") >= 0 || normalizedTarget.toLowerCase() === "all") {
-    return staffStatus !== "퇴직";
+    return isActive && isSubmissionTarget;
   }
-  if (targetText.indexOf("교직원") >= 0) return staffStatus !== "퇴직";
-  if (targetText.indexOf("교사") >= 0 && position.indexOf("교사") >= 0) return true;
+  if (targetText.indexOf("교직원") >= 0) return isActive && isSubmissionTarget;
+  if (targetText.indexOf("교원") >= 0) return isActive && isSubmissionTarget && isTeacher;
+  if (targetText.indexOf("교사") >= 0) return isActive && isSubmissionTarget && isTeacher;
+  if (targetText.indexOf("직원") >= 0) return isActive && isSubmissionTarget && isStaff;
   if (department && targetText.indexOf(department) >= 0) return true;
 
   return targetRows.length === 0;
