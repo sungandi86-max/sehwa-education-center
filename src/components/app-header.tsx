@@ -7,6 +7,7 @@ import { BrandMark } from "@/components/brand-mark";
 import { HomeHeaderActions } from "@/components/home-staff-widgets";
 
 const navigation = [
+  { href: "/", label: "홈" },
   { href: "/qr", label: "QR 출석" },
   { href: "/upload", label: "이수증 제출" },
   { href: "/my", label: "내 이수현황" }
@@ -16,15 +17,15 @@ export function AppHeader() {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
-    <header className="sticky top-0 z-30 border-b border-slateblue-100/70 bg-slateblue-50/82 backdrop-blur-xl print:hidden">
-      <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3 md:px-8">
+    <header className="sticky top-0 z-30 bg-slateblue-50/78 backdrop-blur-xl print:hidden">
+      <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-4 md:px-8 md:py-5">
         <Link href="/" className="min-w-0">
           <BrandMark />
         </Link>
 
-        <nav className="hidden items-center gap-1 rounded-full border border-slateblue-100 bg-white/78 p-1 shadow-[0_10px_28px_rgba(23,59,115,0.045)] md:flex">
+        <nav className="hidden items-center gap-1 md:flex">
           {navigation.map((item) => (
-            <Link key={item.href} href={item.href} className="rounded-full px-4 py-2 text-sm font-semibold text-slate-600 transition hover:bg-brand-50 hover:text-brand-900">
+            <Link key={item.href} href={item.href} className="rounded-full px-4 py-2 text-sm font-semibold text-slate-600 transition hover:bg-white hover:text-brand-900 hover:shadow-[0_10px_26px_rgba(23,59,115,0.055)]">
               {item.label}
             </Link>
           ))}
