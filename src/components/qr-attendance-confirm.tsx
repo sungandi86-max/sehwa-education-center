@@ -19,8 +19,14 @@ type FlowStep = "confirm" | "signature" | "saving" | "done";
 
 interface AttendanceResult {
   message?: string;
+  status?: "completed" | "already";
   completedCount?: number;
   skippedCount?: number;
+  results?: {
+    eventId?: string;
+    status?: "completed" | "already";
+    message?: string;
+  }[];
 }
 
 export function QrAttendanceConfirm({
@@ -34,7 +40,7 @@ export function QrAttendanceConfirm({
 }) {
   const { staff } = useStaffSession();
   const attendanceEvents = events?.length ? events : event ? [event] : [];
-  const isGroup = attendanceEvents.length > 1;
+  const isGroup = Boolean(groupId) || attendanceEvents.length > 1;
   const [isLookupOpen, setIsLookupOpen] = useState(false);
   const [step, setStep] = useState<FlowStep>("confirm");
   const [signature, setSignature] = useState("");
@@ -78,6 +84,9 @@ export function QrAttendanceConfirm({
           eventIds: isGroup ? attendanceEvents.map((item) => item.eventId) : undefined,
           groupId,
           staffId: staff.staffId,
+          staffName: staff.staffName,
+          department: staff.department,
+          position: staff.position,
           signature
         })
       });
@@ -298,8 +307,9 @@ function DoneScreen({
   message: string;
   result: AttendanceResult | null;
 }) {
-  const completedCount = result?.completedCount ?? (events.length === 1 ? 1 : 0);
-  const skippedCount = result?.skippedCount ?? 0;
+  const completedCount = result?.completedCount ?? (result?.status === "already" ? 0 : events.length === 1 ? 1 : 0);
+  const skippedCount = result?.skippedCount ?? (result?.status === "already" ? 1 : 0);
+  const resultByEventId = new Map((result?.results ?? []).map((item) => [item.eventId, item]));
 
   return (
     <section className="quiet-card animate-soft-in overflow-hidden text-center">
@@ -318,19 +328,33 @@ function DoneScreen({
       <div className="p-6">
         <div className="grid gap-3 sm:grid-cols-2">
           <ResultCount label="완료" value={completedCount} tone="text-emerald-700" />
-          <ResultCount label="이미 출석 처리" value={skippedCount} tone="text-amber-700" />
+          <ResultCount label="이미 출석" value={skippedCount} tone="text-amber-700" />
         </div>
 
         <div className="mt-5 space-y-3 text-left">
-          {events.map((event) => (
-            <div key={event.eventId} className="rounded-[22px] border border-slateblue-100 bg-slateblue-50/70 p-4">
-              <p className="text-sm font-semibold text-brand-600">교육명</p>
-              <p className="mt-1 text-lg font-semibold text-brand-900">{event.title}</p>
-              <p className="mt-2 text-sm leading-6 text-slate-500">
-                {event.date} {event.time} · {event.location}
-              </p>
-            </div>
-          ))}
+          {events.map((event) => {
+            const eventResult = resultByEventId.get(event.eventId);
+            const status = eventResult?.status ?? result?.status;
+            const statusLabel = status === "already" ? "이미 출석" : status === "completed" ? "완료" : "처리됨";
+            const statusClass =
+              status === "already" ? "bg-amber-50 text-amber-700 ring-amber-100" : "bg-emerald-50 text-emerald-700 ring-emerald-100";
+
+            return (
+              <div key={event.eventId} className="rounded-[22px] border border-slateblue-100 bg-slateblue-50/70 p-4">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                  <div>
+                    <p className="text-sm font-semibold text-brand-600">교육명</p>
+                    <p className="mt-1 text-lg font-semibold text-brand-900">{event.title}</p>
+                  </div>
+                  <span className={`w-fit rounded-full px-3 py-1 text-xs font-semibold ring-1 ${statusClass}`}>{statusLabel}</span>
+                </div>
+                <p className="mt-2 text-sm leading-6 text-slate-500">
+                  {event.date} {event.time} · {event.location}
+                </p>
+                {eventResult?.message ? <p className="mt-2 text-sm font-medium text-slate-600">{eventResult.message}</p> : null}
+              </div>
+            );
+          })}
         </div>
 
         <div className="mt-6 grid gap-3 sm:grid-cols-2">

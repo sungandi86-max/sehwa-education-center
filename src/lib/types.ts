@@ -32,6 +32,7 @@ export interface StaffRow {
 
 export interface TrainingEventRow {
   eventId: string;
+  eventGroupId?: string;
   제목: string;
   연도: number;
   담당부서: string;

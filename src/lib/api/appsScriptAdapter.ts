@@ -29,6 +29,9 @@ export interface SubmitQrAttendanceInput {
   eventIds?: string[];
   groupId?: string;
   staffId: string;
+  staffName?: string;
+  department?: string;
+  position?: string;
   signature?: string;
 }
 

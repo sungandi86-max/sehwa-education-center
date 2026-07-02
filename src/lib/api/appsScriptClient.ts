@@ -70,6 +70,27 @@ const postAppsScript = async <T>(payload: RawRecord): Promise<T> => {
   return result.data as T;
 };
 
+const postAppsScriptEnvelope = async <T>(payload: RawRecord): Promise<AppsScriptResponse<T>> => {
+  if (!APPS_SCRIPT_API_URL) {
+    throw new Error("NEXT_PUBLIC_APPS_SCRIPT_API_URL is not configured.");
+  }
+
+  const response = await fetch(APPS_SCRIPT_API_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(payload),
+    cache: "no-store"
+  });
+
+  if (!response.ok) {
+    throw new Error(`Apps Script request failed: ${response.status}`);
+  }
+
+  return response.json() as Promise<AppsScriptResponse<T>>;
+};
+
 const asString = (value: unknown, fallback = "") => (value == null ? fallback : String(value));
 
 const toDateTime = (date?: unknown, time?: unknown) => {
@@ -121,6 +142,7 @@ const normalizeMaterialType = (value: unknown): TrainingMaterialRow["자료유�
 
 const normalizeTraining = (row: RawRecord): TrainingEventRow => ({
   eventId: asString(row.eventId),
+  eventGroupId: asString(row.eventGroupId ?? row.groupId ?? row.bundleId) || undefined,
   제목: asString(row.교육명 ?? row.제목, "교육명 미입력"),
   연도: Number(row.교육연도 ?? row.연도 ?? APP_CONFIG.currentYear),
   담당부서: asString(row.담당부서, "담당부서 미입력"),
@@ -215,7 +237,12 @@ export const appsScriptClient = {
 
       return rows.map(normalizeTraining);
     } catch {
-      return mockAppsScriptAdapter.getGroupTrainings(groupId);
+      const rows = await postAppsScript<RawRecord[]>({ action: "getTrainings" });
+      const groupedEvents = rows
+        .map(normalizeTraining)
+        .filter((event) => event.eventGroupId === groupId);
+
+      return groupedEvents.length > 0 ? groupedEvents : mockAppsScriptAdapter.getGroupTrainings(groupId);
     }
   },
 
@@ -271,17 +298,36 @@ export const appsScriptClient = {
       return mockAppsScriptAdapter.submitQrAttendance(input);
     }
 
-    return postAppsScript<SubmitAttendanceResult | SubmitGroupAttendanceResult>({
-      action: "submitQrAttendance",
-      ...input
-    });
+    if (input.mode === "single" && !input.eventId) {
+      return {
+        ok: false,
+        message: "교육 정보가 필요합니다."
+      };
+    }
+
+    if (input.mode === "group") {
+      return submitGroupQrAttendanceToAppsScript(input);
+    }
+
+    return submitSingleQrAttendance(input as SubmitQrAttendanceInput & { eventId: string });
   },
-  async submitGroupQrAttendance(input: { groupId: string; eventIds: string[]; staffId: string; signature?: string }): Promise<SubmitGroupAttendanceResult> {
+  async submitGroupQrAttendance(input: {
+    groupId: string;
+    eventIds: string[];
+    staffId: string;
+    staffName?: string;
+    department?: string;
+    position?: string;
+    signature?: string;
+  }): Promise<SubmitGroupAttendanceResult> {
     return appsScriptClient.submitQrAttendance({
       mode: "group",
       groupId: input.groupId,
       eventIds: input.eventIds,
       staffId: input.staffId,
+      staffName: input.staffName,
+      department: input.department,
+      position: input.position,
       signature: input.signature
     }) as Promise<SubmitGroupAttendanceResult>;
   },
@@ -291,3 +337,88 @@ export const appsScriptClient = {
 };
 
 export { formatDateTime };
+
+async function submitGroupQrAttendanceToAppsScript(input: SubmitQrAttendanceInput): Promise<SubmitGroupAttendanceResult> {
+  const result = await postAppsScriptEnvelope<RawRecord>({
+    ...createQrAttendancePayload(input),
+    mode: "group"
+  });
+  const data = result.data ?? {};
+  const results = Array.isArray(data.results)
+    ? data.results.map((item) => normalizeAttendanceResult(item as RawRecord))
+    : [];
+  const completedCount = Number(data.completedCount ?? results.filter((item) => item.status === "completed").length);
+  const skippedCount = Number(data.skippedCount ?? results.filter((item) => item.status === "already").length);
+  const message = result.message ?? `출석 완료 ${completedCount}건, 이미 출석 처리 ${skippedCount}건`;
+
+  if (!result.success) {
+    return {
+      ok: false,
+      completedCount: 0,
+      skippedCount: 0,
+      results,
+      message
+    };
+  }
+
+  return {
+    ok: true,
+    completedCount,
+    skippedCount,
+    results,
+    message
+  };
+}
+
+async function submitSingleQrAttendance(input: SubmitQrAttendanceInput & { eventId: string }): Promise<SubmitAttendanceResult> {
+  const result = await postAppsScriptEnvelope<RawRecord>(createQrAttendancePayload(input));
+  const row = result.data ?? {};
+  const message = result.message ?? (result.success ? "QR 출석이 기록되었습니다." : "QR 출석 저장에 실패했습니다.");
+
+  if (!result.success) {
+    return {
+      ok: false,
+      eventId: input.eventId,
+      message
+    };
+  }
+
+  return normalizeAttendanceResult(row, input.eventId, message);
+}
+
+function createQrAttendancePayload(input: SubmitQrAttendanceInput): RawRecord {
+  return {
+    action: "submitQrAttendance",
+    mode: input.mode,
+    eventId: input.eventId,
+    eventIds: input.eventIds,
+    groupId: input.groupId,
+    staffId: input.staffId,
+    name: input.staffName,
+    staffName: input.staffName,
+    department: input.department,
+    position: input.position,
+    성명: input.staffName,
+    소속부서: input.department,
+    직책: input.position,
+    signature: input.signature
+  };
+}
+
+function normalizeAttendanceResult(row: RawRecord, fallbackEventId = "", fallbackMessage = "QR 출석이 기록되었습니다."): SubmitAttendanceResult {
+  const message = asString(row.message, fallbackMessage);
+  const already =
+    asString(row.status) === "already" ||
+    asString(row.상태) === "already" ||
+    asString(row.상태) === "중복" ||
+    message.includes("이미") ||
+    message.toLowerCase().includes("already");
+
+  return {
+    ok: asString(row.ok, "true") !== "false",
+    eventId: asString(row.eventId, fallbackEventId),
+    attendanceId: asString(row.attendanceId),
+    status: already ? "already" : "completed",
+    message
+  };
+}

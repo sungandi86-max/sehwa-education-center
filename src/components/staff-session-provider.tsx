@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { ChevronDown, RotateCcw, Search, UserRound } from "lucide-react";
-import { createContext, useContext, useMemo, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useState } from "react";
 
 export interface StaffSession {
   staffId: string;
@@ -21,14 +21,16 @@ interface StaffSessionContextValue {
 const StaffSessionContext = createContext<StaffSessionContextValue | undefined>(undefined);
 
 export function StaffSessionProvider({ children }: { children: React.ReactNode }) {
-  const [staff, setStaffState] = useState<StaffSession | null>(() => {
-    if (typeof window === "undefined") {
-      return null;
-    }
+  const [staff, setStaffState] = useState<StaffSession | null>(null);
 
-    const saved = window.sessionStorage.getItem("sehwa-staff-session");
-    return saved ? (JSON.parse(saved) as StaffSession) : null;
-  });
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      const saved = window.sessionStorage.getItem("sehwa-staff-session");
+      setStaffState(saved ? (JSON.parse(saved) as StaffSession) : null);
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
+  }, []);
 
   const setStaff = (nextStaff: StaffSession) => {
     setStaffState(nextStaff);
