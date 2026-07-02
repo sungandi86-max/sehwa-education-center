@@ -45,7 +45,7 @@ export type AppsScriptRequest =
   | { action: "lookupMyTrainingStatus"; staffName: string; department?: string; year: string }
   | { action: "getMyTrainingHistory"; query: string; year: string }
   | ({ action: "submitQrAttendance" } & SubmitQrAttendanceInput)
-  | { action: "uploadCertificate"; eventId: string; staffId: string; fileName: string; fileBase64: string }
+  | ({ action: "uploadCertificate" } & UploadCertificateInput)
   | { action: "getMyUploads"; query: string; year?: string }
   | { action: "getUploadStatus"; uploadId: string };
 
@@ -63,6 +63,27 @@ export interface SubmitGroupAttendanceResult {
   completedCount: number;
   skippedCount: number;
   results: SubmitAttendanceResult[];
+}
+
+export interface UploadCertificateInput {
+  eventId: string;
+  staffId: string;
+  staffName?: string;
+  name?: string;
+  department?: string;
+  fileName: string;
+  fileBase64?: string;
+  fileId?: string;
+  fileUrl?: string;
+  certificateNumber?: string;
+  trainingTitle?: string;
+  completedAt?: string;
+  trainingHours?: string;
+  issuer?: string;
+  rawText?: string;
+  confidence?: number;
+  aiReviewStatus?: "pending" | "extracted" | "needReview" | "failed";
+  memo?: string;
 }
 
 export interface UploadCertificateResult {
@@ -84,12 +105,7 @@ export interface AppsScriptAdapter {
   lookupMyTrainingStatus(input: { staffName: string; department?: string; year: number }): Promise<MyTrainingLookupResult>;
   getMyTrainingHistory(query: string, year: number): Promise<StaffCompletionLookup>;
   submitQrAttendance(input: SubmitQrAttendanceInput): Promise<SubmitAttendanceResult | SubmitGroupAttendanceResult>;
-  uploadCertificate(input: {
-    eventId: string;
-    staffId: string;
-    fileName: string;
-    fileBase64: string;
-  }): Promise<UploadCertificateResult>;
+  uploadCertificate(input: UploadCertificateInput): Promise<UploadCertificateResult>;
   getMyUploads(query: string, year?: number): Promise<CertificateUploadRow[]>;
   getUploadStatus(uploadId: string): Promise<CertificateUploadRow | undefined>;
 }

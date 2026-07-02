@@ -2,7 +2,13 @@ import { APP_CONFIG } from "@/lib/config";
 import { trainingEvents } from "@/lib/mock-data";
 import { mockAppsScriptAdapter, formatDateTime } from "@/lib/api/mockAppsScriptAdapter";
 import type { CertificateUploadRow, CompletionHistoryViewRow, StaffCompletionLookup, StaffRow, TrainingEventRow, TrainingMaterialRow } from "@/types/training";
-import type { SubmitGroupAttendanceResult, SubmitAttendanceResult, SubmitQrAttendanceInput } from "@/lib/api/appsScriptAdapter";
+import type {
+  SubmitGroupAttendanceResult,
+  SubmitAttendanceResult,
+  SubmitQrAttendanceInput,
+  UploadCertificateInput,
+  UploadCertificateResult
+} from "@/lib/api/appsScriptAdapter";
 import type { MyTrainingLookupItem, MyTrainingLookupResult } from "@/lib/my-training-lookup";
 
 const APPS_SCRIPT_API_URL = process.env.NEXT_PUBLIC_APPS_SCRIPT_API_URL?.trim();
@@ -356,7 +362,51 @@ export const appsScriptClient = {
       signature: input.signature
     }) as Promise<SubmitGroupAttendanceResult>;
   },
-  uploadCertificate: mockAppsScriptAdapter.uploadCertificate.bind(mockAppsScriptAdapter),
+  async uploadCertificate(input: UploadCertificateInput): Promise<UploadCertificateResult> {
+    if (!APPS_SCRIPT_API_URL) {
+      return mockAppsScriptAdapter.uploadCertificate(input);
+    }
+
+    const result = await postAppsScriptEnvelope<RawRecord>({
+      action: "uploadCertificate",
+      eventId: input.eventId,
+      staffId: input.staffId,
+      name: input.name ?? input.staffName,
+      staffName: input.staffName ?? input.name,
+      department: input.department,
+      fileName: input.fileName,
+      fileBase64: input.fileBase64,
+      fileId: input.fileId,
+      fileUrl: input.fileUrl,
+      certificateNumber: input.certificateNumber,
+      trainingTitle: input.trainingTitle,
+      completedAt: input.completedAt,
+      trainingHours: input.trainingHours,
+      issuer: input.issuer,
+      rawText: input.rawText,
+      confidence: input.confidence,
+      aiReviewStatus: input.aiReviewStatus,
+      memo: input.memo
+    });
+    const data = result.data ?? {};
+
+    if (!result.success) {
+      return {
+        ok: false,
+        status: "submitted",
+        aiReviewStatus: input.aiReviewStatus ?? "pending",
+        message: result.message ?? result.error ?? "이수증 제출에 실패했습니다."
+      };
+    }
+
+    return {
+      ok: true,
+      uploadId: getRecordString(data, ["uploadId", "업로드ID"]),
+      status: "submitted",
+      aiReviewStatus: (getRecordString(data, ["aiReviewStatus"], input.aiReviewStatus ?? "pending") as UploadCertificateResult["aiReviewStatus"]),
+      message: result.message ?? "이수증 제출이 완료되었습니다."
+    };
+  },
   async getMyUploads(query: string, year?: number): Promise<CertificateUploadRow[]> {
     if (!APPS_SCRIPT_API_URL) {
       return mockAppsScriptAdapter.getMyUploads(query, year);
