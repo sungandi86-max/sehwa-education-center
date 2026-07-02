@@ -1,6 +1,6 @@
 import { PageHeader, Panel, StatusBadge } from "@/components/ui";
 import { APP_CONFIG } from "@/lib/config";
-import { formatDateTime, getTrainingTitle, mockAppsScriptAdapter } from "@/lib/api/mockAppsScriptAdapter";
+import { appsScriptClient, formatDateTime, getTrainingTitle } from "@/lib/api/appsScriptClient";
 
 export default async function MyTrainingPage({
   searchParams
@@ -8,7 +8,10 @@ export default async function MyTrainingPage({
   searchParams: Promise<{ q?: string }>;
 }) {
   const { q = "T-1004" } = await searchParams;
-  const result = await mockAppsScriptAdapter.getMyTrainingHistory(q, APP_CONFIG.currentYear);
+  const [events, result] = await Promise.all([
+    appsScriptClient.getTrainings(),
+    appsScriptClient.getMyTrainingHistory(q, APP_CONFIG.currentYear)
+  ]);
 
   return (
     <div className="space-y-5">
@@ -27,7 +30,7 @@ export default async function MyTrainingPage({
               {result.completions.map((row) => (
                 <div key={`${row.eventId}-${row.교직원ID}`} className="rounded-md border border-slate-200 bg-slate-50 p-4">
                   <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-                    <p className="font-bold text-slateblue-900">{getTrainingTitle(row.eventId)}</p>
+                    <p className="font-bold text-slateblue-900">{getTrainingTitle(row.eventId, events)}</p>
                     <StatusBadge value={row.이수완료 ? "승인" : "미이수"} />
                   </div>
                   <p className="mt-2 text-sm text-slate-500">
@@ -46,7 +49,7 @@ export default async function MyTrainingPage({
                     <p className="truncate font-bold text-slateblue-900">{upload.파일명}</p>
                     <StatusBadge value={upload.상태} />
                   </div>
-                  <p className="mt-2 text-sm text-slate-500">{getTrainingTitle(upload.eventId)} · {formatDateTime(upload.업로드일시)}</p>
+                  <p className="mt-2 text-sm text-slate-500">{getTrainingTitle(upload.eventId, events)} · {formatDateTime(upload.업로드일시)}</p>
                   {upload.반려사유 ? <p className="mt-2 rounded-md bg-rose-50 p-2 text-sm text-rose-700">반려 사유: {upload.반려사유}</p> : null}
                 </div>
               ))}

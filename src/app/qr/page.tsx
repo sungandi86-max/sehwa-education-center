@@ -1,10 +1,9 @@
 import Link from "next/link";
 import { PageHeader, StatusBadge } from "@/components/ui";
-import { APP_CONFIG } from "@/lib/config";
-import { formatDateTime, mockAppsScriptAdapter } from "@/lib/api/mockAppsScriptAdapter";
+import { appsScriptClient, formatDateTime } from "@/lib/api/appsScriptClient";
 
 export default async function QrPortalPage() {
-  const events = await mockAppsScriptAdapter.getTrainings(APP_CONFIG.currentYear);
+  const events = await appsScriptClient.getTrainings();
   const availableEvents = events.filter((event) => event.상태 === "active" || event.상태 === "scheduled");
 
   return (

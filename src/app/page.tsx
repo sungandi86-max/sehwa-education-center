@@ -2,8 +2,7 @@ import Link from "next/link";
 import { BrandMark } from "@/components/brand-mark";
 import { MyTrainingLookupCard } from "@/components/my-training-lookup-modal";
 import { StatusBadge } from "@/components/ui";
-import { APP_CONFIG } from "@/lib/config";
-import { formatDateTime, getTrainingTitle, mockAppsScriptAdapter } from "@/lib/api/mockAppsScriptAdapter";
+import { appsScriptClient, formatDateTime, getTrainingTitle } from "@/lib/api/appsScriptClient";
 
 function PortalActionCard({
   label,
@@ -41,9 +40,12 @@ function PortalActionCard({
 }
 
 export default async function PortalHomePage() {
-  const events = await mockAppsScriptAdapter.getTrainings(APP_CONFIG.currentYear);
-  const materials = await mockAppsScriptAdapter.getTrainingMaterials();
-  const sampleHistory = await mockAppsScriptAdapter.getMyTrainingHistory("T-1004", APP_CONFIG.currentYear);
+  const [notices, events, materials, sampleHistory] = await Promise.all([
+    appsScriptClient.getNotices(),
+    appsScriptClient.getTrainings(),
+    appsScriptClient.getMaterials(),
+    appsScriptClient.getMyTrainingHistory("T-1004", 2026)
+  ]);
   const openEvents = events.filter((event) => event.상태 === "active" || event.상태 === "scheduled");
   const completedCount = sampleHistory.completions.filter((row) => row.이수완료).length;
   const incompleteCount = sampleHistory.completions.length - completedCount;
@@ -61,10 +63,21 @@ export default async function PortalHomePage() {
 
       <section className="rounded-md border border-teal-100 bg-teal-50 px-5 py-3 text-sm leading-6 text-slate-700">
         <p className="font-bold text-slateblue-900">공지사항</p>
-        <p className="mt-1">
-          교육 등록과 대상자 관리는 Google Sheet에서 담당자가 관리합니다. 이 화면은 교직원이 QR 출석, 이수 확인, 이수증 제출,
-          교육자료 확인을 하는 포털입니다.
-        </p>
+        {notices.length > 0 ? (
+          <div className="mt-1 space-y-1">
+            {notices.slice(0, 2).map((notice) => (
+              <p key={notice.noticeId}>
+                <span className="font-semibold text-slateblue-900">{notice.제목}</span>
+                {notice.내용 ? <span className="ml-2">{notice.내용}</span> : null}
+              </p>
+            ))}
+          </div>
+        ) : (
+          <p className="mt-1">
+            교육 등록과 대상자 관리는 Google Sheet에서 담당자가 관리합니다. 이 화면은 교직원이 QR 출석, 이수 확인, 이수증 제출,
+            교육자료 확인을 하는 포털입니다.
+          </p>
+        )}
       </section>
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -164,7 +177,7 @@ export default async function PortalHomePage() {
               className="rounded-md border border-slate-200 bg-slate-50 p-4 hover:border-brand-200 hover:bg-brand-50"
             >
               <p className="font-bold text-slateblue-900">{material.제목}</p>
-              <p className="mt-2 text-sm text-slate-500">{getTrainingTitle(material.eventId)}</p>
+              <p className="mt-2 text-sm text-slate-500">{getTrainingTitle(material.eventId, events)}</p>
               <div className="mt-4 border-t border-slate-200 pt-3">
                 <span className="rounded-md bg-slateblue-900 px-3 py-2 text-sm font-semibold text-white">자료보기</span>
               </div>

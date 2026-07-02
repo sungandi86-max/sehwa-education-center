@@ -1,6 +1,6 @@
 import { PageHeader, Panel, StatusBadge } from "@/components/ui";
 import { APP_CONFIG } from "@/lib/config";
-import { formatDateTime, getTrainingTitle, mockAppsScriptAdapter } from "@/lib/api/mockAppsScriptAdapter";
+import { appsScriptClient, formatDateTime, getTrainingTitle } from "@/lib/api/appsScriptClient";
 
 export default async function UploadPage({
   searchParams
@@ -8,8 +8,8 @@ export default async function UploadPage({
   searchParams: Promise<{ q?: string }>;
 }) {
   const { q = "T-1004" } = await searchParams;
-  const events = await mockAppsScriptAdapter.getTrainings(APP_CONFIG.currentYear);
-  const result = await mockAppsScriptAdapter.getMyTrainingHistory(q, APP_CONFIG.currentYear);
+  const events = await appsScriptClient.getTrainings();
+  const result = await appsScriptClient.getMyTrainingHistory(q, APP_CONFIG.currentYear);
   const uploadableEvents = events.filter((event) => event.상태 === "active" || event.상태 === "scheduled");
 
   return (
@@ -61,7 +61,7 @@ export default async function UploadPage({
                   <div key={upload.uploadId} className="rounded-md border border-slate-200 bg-slate-50 p-4">
                     <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
                       <div>
-                        <p className="font-bold text-slateblue-900">{getTrainingTitle(upload.eventId)}</p>
+                        <p className="font-bold text-slateblue-900">{getTrainingTitle(upload.eventId, events)}</p>
                         <p className="mt-1 text-sm text-slate-500">{upload.파일명} · {formatDateTime(upload.업로드일시)}</p>
                       </div>
                       <div className="flex flex-wrap gap-2">

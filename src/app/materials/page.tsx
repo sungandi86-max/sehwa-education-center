@@ -1,8 +1,8 @@
 import { PageHeader, StatusBadge } from "@/components/ui";
-import { getTrainingTitle, mockAppsScriptAdapter } from "@/lib/api/mockAppsScriptAdapter";
+import { appsScriptClient, getTrainingTitle } from "@/lib/api/appsScriptClient";
 
 export default async function MaterialsPage() {
-  const materials = await mockAppsScriptAdapter.getTrainingMaterials();
+  const [materials, trainings] = await Promise.all([appsScriptClient.getMaterials(), appsScriptClient.getTrainings()]);
 
   return (
     <div className="space-y-5">
@@ -20,7 +20,7 @@ export default async function MaterialsPage() {
               <StatusBadge value={material.자료유형} />
             </div>
             <h2 className="mt-3 text-lg font-bold text-slateblue-900">{material.제목}</h2>
-            <p className="mt-3 min-h-10 text-sm leading-6 text-slate-600">{getTrainingTitle(material.eventId)}</p>
+            <p className="mt-3 min-h-10 text-sm leading-6 text-slate-600">{getTrainingTitle(material.eventId, trainings)}</p>
             <div className="mt-4 border-t border-slate-200 pt-4">
               <span className="rounded-md bg-slateblue-900 px-4 py-2 text-sm font-semibold text-white group-hover:bg-brand-700">
                 자료보기
