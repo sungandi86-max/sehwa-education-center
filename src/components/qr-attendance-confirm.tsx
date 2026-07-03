@@ -342,35 +342,49 @@ function SignatureScreen({
   onSubmit: () => void;
 }) {
   const [padKey, setPadKey] = useState(0);
+
+  useEffect(() => {
+    const originalBodyOverflow = document.body.style.overflow;
+    const originalHtmlOverflow = document.documentElement.style.overflow;
+
+    document.body.style.overflow = "hidden";
+    document.documentElement.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = originalBodyOverflow;
+      document.documentElement.style.overflow = originalHtmlOverflow;
+    };
+  }, []);
+
   const clearSignature = () => {
     onChange("");
     setPadKey((value) => value + 1);
   };
 
   return (
-    <section className="app-card animate-soft-in overflow-hidden">
-      <div className="p-5 pb-0 sm:p-6 sm:pb-0">
-      <button type="button" onClick={onBack} className="mb-5 inline-flex items-center gap-2 text-sm font-semibold text-brand-900">
-        <ArrowLeft size={17} />
-        이전으로
-      </button>
+    <section className="app-card fixed inset-x-3 bottom-3 top-3 z-40 flex animate-soft-in flex-col overflow-hidden sm:left-1/2 sm:right-auto sm:w-[calc(100%-2rem)] sm:max-w-2xl sm:-translate-x-1/2">
+      <div className="min-h-0 flex-1 overflow-hidden p-5 pb-0 sm:p-6 sm:pb-0">
+        <button type="button" onClick={onBack} className="mb-4 inline-flex items-center gap-2 text-sm font-semibold text-brand-900">
+          <ArrowLeft size={17} />
+          이전으로
+        </button>
 
-      <div className="rounded-[26px] border border-softpurple-100 bg-gradient-to-br from-white to-softpurple-50 p-5">
-        <p className="text-sm font-semibold text-[#5E4BE8]">전자서명 안내</p>
-        <h2 className="mt-2 text-3xl font-semibold text-brand-900">전자서명</h2>
-        <p className="mt-3 text-sm leading-7 text-slate-600">
-          연수 증빙용으로 사용됩니다. {isGroup ? `서명 한 번으로 ${eventCount}개 교육에 같은 서명이 연결됩니다.` : "아래 영역에 서명해주세요."}
-        </p>
+        <div className="rounded-[26px] border border-softpurple-100 bg-gradient-to-br from-white to-softpurple-50 p-4">
+          <p className="text-sm font-semibold text-[#5E4BE8]">전자서명 안내</p>
+          <h2 className="mt-1 text-2xl font-semibold text-brand-900">전자서명</h2>
+          <p className="mt-2 text-sm leading-6 text-slate-600">
+            연수 증빙용으로 사용됩니다. {isGroup ? `서명 한 번으로 ${eventCount}개 교육에 같은 서명이 연결됩니다.` : "아래 영역에 서명해주세요."}
+          </p>
+        </div>
+
+        <div className="mt-4">
+          <SignaturePad key={padKey} onChange={onChange} />
+        </div>
+
+        {message ? <p className="mt-4 rounded-2xl bg-rose-50 p-3 text-sm font-semibold text-rose-700">{message}</p> : null}
       </div>
 
-      <div className="mt-7">
-        <SignaturePad key={padKey} onChange={onChange} />
-      </div>
-
-      {message ? <p className="mt-6 rounded-2xl bg-rose-50 p-3 text-sm font-semibold text-rose-700">{message}</p> : null}
-      </div>
-
-      <div className="sticky bottom-0 z-10 mt-6 grid grid-cols-[0.9fr_1.1fr] gap-3 border-t border-slateblue-100 bg-white/92 p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] backdrop-blur">
+      <div className="sticky bottom-0 z-10 mt-4 grid grid-cols-[0.9fr_1.1fr] gap-3 border-t border-slateblue-100 bg-white/92 p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] backdrop-blur">
         <button type="button" onClick={clearSignature} className="btn-secondary min-h-14">
           <Eraser size={17} />
           다시쓰기
@@ -425,11 +439,14 @@ function DoneScreen({
   const resultByEventId = new Map((result?.results ?? []).map((item) => [item.eventId, item]));
   const title = getDoneTitle(result?.status, completedCount, skippedCount, blockedCount);
   const showCounts = completedCount > 0 || skippedCount > 0;
+  const isAlreadyOnly = skippedCount > 0 && completedCount === 0 && blockedCount === 0;
   const primaryEvent = events[0];
   const firstResultWithTime = result?.results?.find((item) => item.attendedAt);
   const attendedAt = formatAttendanceTime(result?.attendedAt || firstResultWithTime?.attendedAt);
   const successDetail =
-    completedCount > 0 && primaryEvent
+    isAlreadyOnly
+      ? "이미 저장된 출석 기록이 확인되었습니다. 추가 전자서명은 필요하지 않습니다."
+      : completedCount > 0 && primaryEvent
       ? `${primaryEvent.title} 출석이 정상적으로 저장되었습니다.`
       : message;
 
@@ -492,8 +509,10 @@ function DoneScreen({
 
         <div className="mt-5 rounded-[22px] bg-white/80 p-4 text-left text-sm leading-6 text-slate-500 ring-1 ring-slateblue-100">
           {attendedAt ? <p className="font-bold text-brand-900">출석시간 {attendedAt}</p> : null}
-          <p className={attendedAt ? "mt-1" : ""}>전자서명과 출석 시간이 저장되었습니다.</p>
-          <p>최종 서명부 생성 시 증빙 자료로 사용됩니다.</p>
+          <p className={attendedAt ? "mt-1" : ""}>
+            {isAlreadyOnly ? "기존 출석 기록이 확인되었습니다." : "전자서명과 출석 시간이 저장되었습니다."}
+          </p>
+          <p>{isAlreadyOnly ? "중복 서명 없이 출석 완료 상태를 유지합니다." : "최종 서명부 생성 시 증빙 자료로 사용됩니다."}</p>
         </div>
 
         <div className="mt-6 grid gap-3 sm:grid-cols-2">
@@ -532,7 +551,7 @@ function EventMeta({ icon, value }: { icon: ReactNode; value: string }) {
 
 function getDoneTitle(status: AttendanceStatus | undefined, completedCount: number, skippedCount: number, blockedCount: number) {
   if (completedCount > 0) return "출석이 완료되었습니다.";
-  if (skippedCount > 0 && blockedCount === 0) return "이미 출석 처리되었습니다.";
+  if (skippedCount > 0 && blockedCount === 0) return "이미 출석 완료";
   if (status === "notTarget") return "이 교육의 대상자가 아닙니다.";
   if (status === "excluded") return "사전 서명 제외 대상입니다.";
   return "출석 처리 결과";
@@ -660,7 +679,7 @@ function SignaturePad({ onChange }: { onChange: (value: string) => void }) {
       <div className="rounded-[30px] border border-slateblue-100 bg-white p-3 shadow-[inset_0_2px_10px_rgba(23,59,115,0.035),0_18px_44px_rgba(23,59,115,0.055)]">
         <canvas
           ref={canvasRef}
-          className="h-[360px] w-full touch-none select-none overscroll-contain rounded-[24px] bg-white sm:h-80"
+          className="h-[calc(100vh-22rem)] min-h-[250px] w-full touch-none select-none overscroll-contain rounded-[24px] bg-white sm:h-80"
           style={{
             touchAction: "none",
             overscrollBehavior: "contain",

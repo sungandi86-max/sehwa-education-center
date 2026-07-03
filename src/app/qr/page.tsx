@@ -52,7 +52,7 @@ export default async function QrPortalPage() {
 
         <div className="mt-5 grid gap-2.5">
           <button type="button" className="btn-primary">
-            <Camera size={18} />
+            <span aria-hidden>📷</span>
             QR 스캔 시작
           </button>
           <Link href="/my" className="btn-secondary">

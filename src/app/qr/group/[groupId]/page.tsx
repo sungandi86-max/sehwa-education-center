@@ -1,6 +1,7 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ArrowLeft } from "lucide-react";
 import { QrAttendanceConfirm, type QrAttendanceEventInfo } from "@/components/qr-attendance-confirm";
-import { PageHeader } from "@/components/ui";
 import { appsScriptClient } from "@/lib/api/appsScriptClient";
 import type { TrainingEventRow } from "@/types/training";
 
@@ -41,8 +42,8 @@ export default async function GroupQrAttendancePage({ params }: { params: Promis
   }
 
   return (
-    <div className="mx-auto max-w-2xl space-y-8">
-      <PageHeader title="묶음 QR 출석" description="한 번의 본인 확인과 전자서명으로 여러 교육 출석을 처리합니다." />
+    <div className="mx-auto max-w-md space-y-4 md:max-w-2xl">
+      <QrAppBar title="묶음 QR 출석" />
       <QrAttendanceConfirm groupId={groupId} events={events.map(toQrEvent)} />
     </div>
   );
@@ -50,12 +51,25 @@ export default async function GroupQrAttendancePage({ params }: { params: Promis
 
 function GroupQrLoadError() {
   return (
-    <div className="mx-auto max-w-2xl space-y-8">
-      <PageHeader title="묶음 QR 출석" description="한 번의 본인 확인과 전자서명으로 여러 교육 출석을 처리합니다." />
-      <section className="quiet-card p-6 text-center">
+    <div className="mx-auto max-w-md space-y-4 md:max-w-2xl">
+      <QrAppBar title="묶음 QR 출석" />
+      <section className="app-card p-6 text-center">
         <h1 className="text-2xl font-semibold text-brand-900">정보를 불러오지 못했습니다.</h1>
         <p className="mt-3 text-sm leading-7 text-slate-600">잠시 후 다시 시도해주세요. 계속 문제가 있으면 교육 담당자에게 문의해주세요.</p>
       </section>
+    </div>
+  );
+}
+
+function QrAppBar({ title }: { title: string }) {
+  return (
+    <div className="flex items-center justify-between">
+      <Link href="/qr" className="flex size-11 items-center justify-center rounded-2xl bg-white text-brand-900 shadow-[0_10px_24px_rgba(23,59,115,0.06)] ring-1 ring-slateblue-100">
+        <ArrowLeft size={21} />
+        <span className="sr-only">QR 출석으로 돌아가기</span>
+      </Link>
+      <h1 className="text-lg font-semibold text-brand-900">{title}</h1>
+      <div className="size-11" aria-hidden />
     </div>
   );
 }
