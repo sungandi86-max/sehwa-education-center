@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Building2, CalendarDays, Clock3, Layers3, MapPin } from "lucide-react";
 import { APP_CONFIG } from "@/lib/config";
 import { PrintPageButton } from "@/components/print-page-button";
 import { QrDisplayCode } from "@/components/qr-display-code";
@@ -39,56 +39,75 @@ export default async function GroupQrPrintPage({ params }: { params: Promise<{ g
   const firstEvent = events[0];
   const lastEvent = events[events.length - 1];
   const groupTitle = events.length === 1 ? firstEvent.제목 : `${firstEvent.제목} 외 ${events.length - 1}개 연수`;
-  const dateText = `${formatDateOnly(firstEvent.시작일시)} ${formatTimeOnly(firstEvent.시작일시)} - ${formatTimeOnly(lastEvent.종료일시)}`;
+  const dateText = formatDateOnly(firstEvent.시작일시);
+  const timeText = `${formatTimeOnly(firstEvent.시작일시)} - ${formatTimeOnly(lastEvent.종료일시)}`;
   const placeText = Array.from(new Set(events.map((event) => event.장소).filter(Boolean))).join(", ");
 
   return (
     <div className="mx-auto max-w-4xl print:max-w-none">
       <div className="print-actions mb-5 flex items-center justify-between gap-3 print:hidden">
-        <Link href="/" className="btn-secondary">
+        <Link href="/" className="btn-secondary min-h-12">
           <ArrowLeft size={17} />
-          홈으로
+          홈
         </Link>
-        <PrintPageButton />
+        <div className="fixed right-5 top-5 z-40">
+          <PrintPageButton />
+        </div>
       </div>
 
-      <article className="qr-print-page mx-auto flex min-h-[277mm] max-w-[190mm] flex-col bg-white px-10 py-10 text-center shadow-soft print:min-h-0 print:max-w-none print:px-0 print:py-0 print:shadow-none">
-        <header className="print-header">
-          <p className="text-lg font-bold text-slate-500 print:text-[13pt]">{APP_CONFIG.appName}</p>
-          <p className="mt-3 text-sm font-bold text-brand-600 print:mt-2 print:text-[10pt]">묶음 연수 QR</p>
-          <h1 className="mt-3 text-[2.35rem] font-extrabold leading-tight text-brand-900 print:text-[27pt]">{groupTitle}</h1>
-        </header>
+      <article className="qr-print-page mx-auto flex min-h-[277mm] max-w-[190mm] flex-col gap-5 rounded-[36px] border border-slateblue-100 bg-gradient-to-b from-white to-slateblue-50/60 p-6 shadow-lift print:min-h-0 print:max-w-none print:gap-4 print:rounded-none print:border-0 print:bg-white print:p-0 print:shadow-none">
+        <section className="rounded-[32px] border border-slateblue-100 bg-white p-6 text-left shadow-[0_18px_48px_rgba(23,59,115,0.07)] print:rounded-[24px] print:p-5 print:shadow-none">
+          <div className="flex items-start gap-4">
+            <div className="flex size-14 shrink-0 items-center justify-center rounded-[22px] bg-gradient-to-br from-brand-900 to-brand-500 text-white">
+              <Layers3 size={27} />
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-slate-500">{APP_CONFIG.appName}</p>
+              <p className="mt-1 text-sm font-semibold text-brand-600">묶음 연수 QR</p>
+              <h1 className="mt-2 text-[2rem] font-semibold leading-tight tracking-tight text-brand-900 print:text-[25pt]">{groupTitle}</h1>
+            </div>
+          </div>
 
-        <section className="print-meta mx-auto mt-6 grid w-full max-w-[150mm] gap-3 text-left print:mt-4">
-          <InfoRow label="일시" value={dateText} />
-          <InfoRow label="장소" value={placeText || "장소 미정"} />
-          <InfoRow label="담당부서" value={firstEvent.담당부서 || "담당부서"} />
+          <div className="mt-5 grid gap-3 sm:grid-cols-2">
+            <InfoCard icon={<CalendarDays size={19} />} label="일자" value={dateText} />
+            <InfoCard icon={<Clock3 size={19} />} label="시간" value={timeText} />
+            <InfoCard icon={<MapPin size={19} />} label="장소" value={placeText || "장소 미정"} />
+            <InfoCard icon={<Building2 size={19} />} label="담당부서" value={firstEvent.담당부서 || "담당부서"} />
+          </div>
         </section>
 
-        <section className="mt-5 text-left print:mt-4">
-          <p className="text-sm font-extrabold text-brand-700 print:text-[10pt]">이번 QR로 출석 처리되는 교육</p>
+        <section className="rounded-[30px] border border-slateblue-100 bg-white p-5 text-left shadow-[0_16px_40px_rgba(23,59,115,0.055)] print:rounded-[20px] print:p-4 print:shadow-none">
+          <p className="text-sm font-semibold text-brand-700 print:text-[10pt]">이번 QR로 출석 처리되는 교육</p>
           <div className="mt-3 grid gap-1.5 print:mt-2">
             {events.map((event, index) => (
-              <div key={event.eventId} className="grid grid-cols-[26px_1fr] items-start gap-2 rounded-xl border border-slate-200 px-3 py-2 print:rounded-none print:px-2 print:py-1.5">
-                <span className="font-bold text-brand-600 print:text-[9pt]">{index + 1}</span>
-                <p className="font-extrabold text-brand-900 print:text-[10.5pt]">{event.제목}</p>
+              <div key={event.eventId} className="grid grid-cols-[28px_1fr] items-start gap-2 rounded-2xl bg-slateblue-50 px-3 py-2 print:rounded-[10px] print:px-2 print:py-1.5">
+                <span className="font-semibold text-brand-600 print:text-[9pt]">{index + 1}</span>
+                <p className="font-semibold text-brand-900 print:text-[10.5pt]">{event.제목}</p>
               </div>
             ))}
           </div>
         </section>
 
-        <section className="flex flex-1 flex-col items-center justify-center py-5 print:py-4">
+        <section className="flex flex-1 flex-col items-center justify-center rounded-[34px] border border-slateblue-100 bg-white p-7 shadow-[0_20px_56px_rgba(23,59,115,0.08)] print:rounded-[24px] print:p-6 print:shadow-none">
           <div className="w-full max-w-[126mm] print:max-w-[126mm]">
             <QrDisplayCode value={attendanceUrl} large />
           </div>
           <p className="mt-4 break-all text-xs font-semibold text-slate-400 print:text-[8.5pt]">{attendanceUrl}</p>
         </section>
 
-        <footer className="print-footer">
-          <p className="text-[1.85rem] font-extrabold leading-snug text-brand-900 print:text-[22pt]">
+        <section className="rounded-[30px] border border-brand-100 bg-gradient-to-br from-white to-brand-50 p-6 text-center shadow-[0_16px_40px_rgba(23,59,115,0.055)] print:rounded-[22px] print:p-5 print:shadow-none">
+          <p className="text-[1.75rem] font-semibold leading-snug text-brand-900 print:text-[21pt]">
             휴대폰 카메라로 QR을 스캔하여 출석해주세요.
           </p>
           <p className="mt-3 text-base font-semibold text-slate-500 print:text-[11pt]">한 번의 전자서명으로 위 교육에 출석 처리됩니다.</p>
+        </section>
+
+        <footer className="mt-auto flex items-center justify-between gap-4 rounded-[26px] bg-white/80 px-5 py-4 text-left text-sm font-semibold text-slate-500 ring-1 ring-slateblue-100 print:rounded-none print:bg-white print:px-0 print:py-2 print:ring-0">
+          <div>
+            <p className="text-brand-900">{APP_CONFIG.appName}</p>
+            <p className="mt-1">{APP_CONFIG.schoolName}</p>
+          </div>
+          <p className="text-right">문의: 담당부서</p>
         </footer>
       </article>
     </div>
@@ -106,11 +125,14 @@ function PrintLoadError() {
   );
 }
 
-function InfoRow({ label, value }: { label: string; value: string }) {
+function InfoCard({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
   return (
-    <div className="grid grid-cols-[84px_1fr] items-start gap-4 border-b border-slate-200 pb-3 text-base last:border-b-0 print:grid-cols-[24mm_1fr] print:pb-2 print:text-[13pt]">
-      <span className="font-bold text-slate-500">{label}</span>
-      <span className="font-extrabold text-brand-900">{value}</span>
+    <div className="flex items-center gap-3 rounded-[22px] bg-slateblue-50 px-4 py-3 print:rounded-[16px]">
+      <span className="text-brand-600">{icon}</span>
+      <div>
+        <p className="text-xs font-semibold text-slate-500">{label}</p>
+        <p className="mt-0.5 text-base font-semibold text-brand-900 print:text-[12pt]">{value}</p>
+      </div>
     </div>
   );
 }
