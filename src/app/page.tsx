@@ -33,7 +33,7 @@ export default async function PortalHomePage() {
     },
     {
       title: "내 이수현황",
-      description: "이수, 미이수, 제출 상태를 확인합니다.",
+      description: "이수·미이수·제출 상태를 확인합니다.",
       action: "확인하기",
       href: "/my",
       icon: UserRound,
@@ -45,39 +45,39 @@ export default async function PortalHomePage() {
 
   return (
     <div className="mx-auto max-w-5xl">
-      <div className="app-panel">
-        <div className="app-panel-inner space-y-4 md:space-y-5">
-          <section className="rounded-[22px] border border-slateblue-100 bg-white/88 px-3.5 py-2.5 shadow-[0_10px_28px_rgba(23,59,115,0.045)] md:rounded-[24px] md:px-5 md:py-3">
-            <div className="flex min-w-0 items-center gap-3">
-              <p className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-[#F2EEFF] px-2.5 py-1 text-[11px] font-semibold text-[#5E4BE8] md:px-3 md:py-1.5 md:text-xs">
-                <Bell size={14} />
+      <div className="rounded-[28px] border border-white/80 bg-white/[0.74] p-2.5 shadow-[0_22px_66px_rgba(23,59,115,0.09)] backdrop-blur md:rounded-[36px] md:p-5">
+        <div className="space-y-3 rounded-[24px] border border-slateblue-100/80 bg-gradient-to-b from-white to-[#FBFCFF] p-3 md:space-y-5 md:rounded-[32px] md:p-7">
+          <section className="rounded-[18px] border border-slateblue-100 bg-white/88 px-3 py-2 shadow-[0_8px_22px_rgba(23,59,115,0.04)] md:rounded-[24px] md:px-5 md:py-3">
+            <div className="flex min-w-0 items-center gap-2.5">
+              <p className="inline-flex shrink-0 items-center gap-1 rounded-full bg-[#F2EEFF] px-2.5 py-0.5 text-[11px] font-semibold text-[#5E4BE8] md:px-3 md:py-1.5 md:text-xs">
+                <Bell size={12} />
                 공지
               </p>
               {mainNotice ? (
-                <p className="min-w-0 truncate text-sm font-medium text-slate-600 md:text-[15px]">
+                <p className="min-w-0 truncate text-[13px] font-medium text-slate-600 md:text-[15px]">
                   <span className="font-semibold text-brand-900">{mainNotice.제목}</span>
                   {mainNotice.내용 ? <span className="ml-2 text-slate-500">{mainNotice.내용}</span> : null}
                 </p>
               ) : (
-                <p className="min-w-0 truncate text-sm font-medium text-slate-500 md:text-[15px]">현재 표시할 공지사항이 없습니다.</p>
+                <p className="min-w-0 truncate text-[13px] font-medium text-slate-500 md:text-[15px]">현재 표시할 공지사항이 없습니다.</p>
               )}
-              <ArrowRight className="ml-auto shrink-0 text-brand-500" size={18} />
+              <ArrowRight className="ml-auto shrink-0 text-brand-500" size={16} />
             </div>
           </section>
 
-          <section className="grid gap-3 md:grid-cols-3 md:gap-5">
+          <section className="grid gap-2.5 md:grid-cols-3 md:gap-5">
             {portalCards.map((card) => (
               <PortalCard key={card.href} {...card} />
             ))}
           </section>
 
-          <section className="flex items-start gap-3 rounded-[24px] border border-slateblue-100 bg-white/86 px-4 py-3.5 text-sm leading-6 text-slate-500 shadow-[0_12px_30px_rgba(23,59,115,0.045)] md:items-center md:rounded-[28px] md:px-6 md:py-5">
-            <div className="flex size-11 shrink-0 items-center justify-center rounded-[18px] bg-gradient-to-br from-[#E9FFF5] to-[#DDF5EA] text-[#18A866] shadow-[0_12px_28px_rgba(24,168,102,0.16)] md:size-[52px] md:rounded-[20px]">
-              <ShieldCheck size={24} strokeWidth={1.85} />
+          <section className="flex items-start gap-3 rounded-[20px] border border-slateblue-100 bg-white/78 px-3.5 py-3 text-[13px] leading-5 text-slate-500 shadow-[0_10px_24px_rgba(23,59,115,0.035)] md:items-center md:rounded-[28px] md:px-6 md:py-5 md:text-sm md:leading-6">
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-[15px] bg-gradient-to-br from-[#E9FFF5] to-[#DDF5EA] text-[#18A866] shadow-[0_10px_22px_rgba(24,168,102,0.13)] md:size-[52px] md:rounded-[20px]">
+              <ShieldCheck size={20} strokeWidth={1.85} />
             </div>
             <div>
-              <p className="text-base font-semibold tracking-tight text-brand-900">안전하게 저장됩니다.</p>
-              <p className="mt-1 text-slate-500">전자서명과 제출 기록은 연수 증빙용으로 저장되며, 개인정보는 안전하게 보호됩니다.</p>
+              <p className="text-sm font-semibold tracking-tight text-brand-900 md:text-base">안전하게 저장됩니다.</p>
+              <p className="mt-0.5 text-slate-500 md:mt-1">전자서명과 제출 기록은 연수 증빙용으로 저장되며, 개인정보는 안전하게 보호됩니다.</p>
             </div>
           </section>
         </div>
@@ -108,23 +108,23 @@ function PortalCard({
   return (
     <Link
       href={href}
-      className={`group relative flex min-h-[142px] overflow-hidden rounded-[28px] border border-slateblue-100 bg-gradient-to-br ${surface} p-5 shadow-[0_18px_48px_rgba(23,59,115,0.075),0_4px_14px_rgba(23,59,115,0.035)] transition duration-[250ms] ease-out hover:-translate-y-1 hover:border-brand-900 hover:shadow-[0_28px_80px_rgba(23,59,115,0.13),0_6px_20px_rgba(23,59,115,0.06)] md:min-h-[236px] md:rounded-[32px] md:p-7`}
+      className={`group relative flex min-h-[104px] overflow-hidden rounded-[24px] border border-slateblue-100 bg-gradient-to-br ${surface} p-4 shadow-[0_14px_38px_rgba(23,59,115,0.065),0_3px_10px_rgba(23,59,115,0.03)] transition duration-[250ms] ease-out hover:-translate-y-1 hover:border-brand-900 hover:shadow-[0_28px_80px_rgba(23,59,115,0.13),0_6px_20px_rgba(23,59,115,0.06)] md:min-h-[236px] md:rounded-[32px] md:p-7`}
     >
-      <div className="grid w-full grid-cols-[52px_1fr_24px] items-center gap-4 md:flex md:flex-col md:items-stretch">
-        <div className={`flex size-[52px] shrink-0 items-center justify-center rounded-[20px] bg-gradient-to-br ${iconTone} text-white shadow-[0_16px_30px_rgba(23,59,115,0.16)] ring-1 ring-white/80 md:size-16 md:rounded-[22px]`}>
-          <Icon size={28} strokeWidth={1.75} className="md:size-[33px]" />
+      <div className="grid w-full grid-cols-[44px_1fr_22px] items-center gap-3 md:flex md:flex-col md:items-stretch">
+        <div className={`flex size-11 shrink-0 items-center justify-center rounded-[17px] bg-gradient-to-br ${iconTone} text-white shadow-[0_12px_24px_rgba(23,59,115,0.14)] ring-1 ring-white/80 md:size-16 md:rounded-[22px]`}>
+          <Icon size={24} strokeWidth={1.75} className="md:size-[33px]" />
         </div>
 
         <div className="min-w-0 md:mt-7 md:flex-1">
-          <h2 className="text-xl font-semibold leading-tight tracking-tight text-brand-900 md:text-[2rem]">{title}</h2>
-          <p className="mt-1.5 max-w-[16rem] text-sm font-medium leading-6 text-slate-600 md:mt-3 md:text-[15px] md:leading-7">
+          <h2 className="text-[1.12rem] font-semibold leading-tight tracking-tight text-brand-900 md:text-[2rem]">{title}</h2>
+          <p className="mt-1 max-w-none text-[13px] font-medium leading-5 text-slate-600 md:mt-3 md:max-w-[16rem] md:text-[15px] md:leading-7">
             {description}
           </p>
         </div>
 
         <div className="flex items-center justify-end md:mt-8 md:justify-between">
           <p className={`hidden text-[15px] font-semibold md:block ${actionTone}`}>{action}</p>
-          <ArrowRight className={`transition duration-[250ms] ease-out group-hover:translate-x-1 ${actionTone}`} size={25} />
+          <ArrowRight className={`transition duration-[250ms] ease-out group-hover:translate-x-1 ${actionTone}`} size={22} />
         </div>
       </div>
     </Link>

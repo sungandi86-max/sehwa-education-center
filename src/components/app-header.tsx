@@ -18,7 +18,7 @@ export function AppHeader() {
 
   return (
     <header className="sticky top-0 z-30 bg-slateblue-50/78 backdrop-blur-xl print:hidden">
-      <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-4 md:px-8 md:py-5">
+      <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-2.5 md:px-8 md:py-5">
         <Link href="/" className="min-w-0">
           <BrandMark />
         </Link>
@@ -38,7 +38,7 @@ export function AppHeader() {
         <button
           type="button"
           onClick={() => setIsOpen((value) => !value)}
-          className="flex size-11 items-center justify-center rounded-2xl border border-slateblue-100 bg-white text-brand-900 shadow-[0_10px_24px_rgba(23,59,115,0.06)] md:hidden"
+          className="flex size-10 items-center justify-center rounded-[15px] border border-slateblue-100 bg-white text-brand-900 shadow-[0_8px_20px_rgba(23,59,115,0.055)] md:hidden"
           aria-label="메뉴 열기"
         >
           {isOpen ? <X size={21} /> : <Menu size={21} />}
