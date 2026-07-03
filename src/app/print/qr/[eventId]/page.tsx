@@ -73,7 +73,7 @@ export default async function QrPrintPage({ params }: { params: Promise<{ eventI
 
         <footer className="print-footer">
           <p className="text-[2rem] font-extrabold leading-snug text-brand-900 print:text-[24pt]">
-            휴대폰 카메라로 QR을 스캔하여 출석하세요.
+            휴대폰 카메라로 QR을 스캔하여 출석해주세요.
           </p>
           <p className="mt-3 text-base font-semibold text-slate-500 print:text-[11pt]">문의: 담당부서</p>
         </footer>

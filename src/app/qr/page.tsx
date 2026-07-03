@@ -78,12 +78,11 @@ export default async function QrPortalPage() {
         <div className="space-y-2.5">
           {visibleEvents.length > 0 ? (
             visibleEvents.map((event) => (
-              <Link
+              <div
                 key={event.eventId}
-                href={`/qr/${event.eventId}`}
-                className="group flex items-center gap-3 rounded-[22px] border border-slateblue-100 bg-white px-4 py-3 shadow-[0_8px_20px_rgba(23,59,115,0.035)] transition hover:-translate-y-0.5 hover:border-brand-900"
+                className="rounded-[22px] border border-slateblue-100 bg-white px-4 py-3 shadow-[0_8px_20px_rgba(23,59,115,0.035)] transition hover:-translate-y-0.5 hover:border-brand-900"
               >
-                <div className="min-w-0 flex-1">
+                <div className="min-w-0">
                   <div className="mb-1 flex items-center gap-2">
                     <StatusBadge value={event.상태} />
                     <span className="truncate text-xs font-semibold text-brand-600">{event.담당부서}</span>
@@ -99,8 +98,17 @@ export default async function QrPortalPage() {
                     </p>
                   </div>
                 </div>
-                <ChevronRight className="shrink-0 text-brand-500 transition group-hover:translate-x-1" size={20} />
-              </Link>
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  <Link href={`/qr/${event.eventId}`} className="btn-primary min-h-11 rounded-[14px] px-3 py-2 text-xs">
+                    QR 출석
+                    <ChevronRight size={15} />
+                  </Link>
+                  <Link href={`/print/qr/${event.eventId}`} className="btn-secondary min-h-11 rounded-[14px] px-3 py-2 text-xs">
+                    <Printer size={15} />
+                    QR 출력
+                  </Link>
+                </div>
+              </div>
             ))
           ) : (
             <div className="rounded-[22px] bg-slateblue-50 px-4 py-5 text-center text-sm font-medium text-slate-500">

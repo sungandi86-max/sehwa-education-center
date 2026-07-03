@@ -86,7 +86,7 @@ export default async function GroupQrPrintPage({ params }: { params: Promise<{ g
 
         <footer className="print-footer">
           <p className="text-[1.85rem] font-extrabold leading-snug text-brand-900 print:text-[22pt]">
-            휴대폰 카메라로 QR을 스캔하여 출석하세요.
+            휴대폰 카메라로 QR을 스캔하여 출석해주세요.
           </p>
           <p className="mt-3 text-base font-semibold text-slate-500 print:text-[11pt]">한 번의 전자서명으로 위 교육에 출석 처리됩니다.</p>
         </footer>
