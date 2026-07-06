@@ -11,6 +11,8 @@ import type { MyTrainingLookupResult } from "@/lib/my-training-lookup";
 
 export type AppsScriptAction =
   | "getAppConfig"
+  | "getAdminLoginConfig"
+  | "verifyAdminAccessCode"
   | "getTrainings"
   | "getTrainingDetail"
   | "getMaterials"
@@ -72,6 +74,8 @@ export interface AttendanceEligibilityResult {
 
 export type AppsScriptRequest =
   | { action: "getAppConfig" }
+  | { action: "getAdminLoginConfig" }
+  | { action: "verifyAdminAccessCode"; code: string }
   | { action: "getTrainings"; year: string }
   | { action: "getTrainingDetail"; eventId: string }
   | { action: "getMaterials"; eventId?: string }
@@ -179,9 +183,19 @@ export interface AttendanceReportResult {
   fileName: string;
 }
 
+export interface AdminLoginConfig {
+  adminCodeHint?: string;
+}
+
+export interface AdminAuthResult extends AdminLoginConfig {
+  ok: boolean;
+}
+
 export interface AppsScriptAdapter {
   request<T>(payload: AppsScriptRequest): Promise<T>;
   getAppConfig(): Promise<AppConfig>;
+  getAdminLoginConfig(): Promise<AdminLoginConfig>;
+  verifyAdminAccessCode(code: string): Promise<AdminAuthResult>;
   getTrainings(year: number): Promise<TrainingEventRow[]>;
   getTrainingDetail(eventId: string): Promise<TrainingDetail | undefined>;
   getTrainingMaterials(eventId?: string): Promise<TrainingMaterialRow[]>;
@@ -223,6 +237,8 @@ export function createAppsScriptHttpAdapter(apiUrl = process.env.NEXT_PUBLIC_APP
   return {
     request: post,
     getAppConfig: () => post({ action: "getAppConfig" }),
+    getAdminLoginConfig: () => post({ action: "getAdminLoginConfig" }),
+    verifyAdminAccessCode: (code) => post({ action: "verifyAdminAccessCode", code }),
     getTrainings: (year) => post({ action: "getTrainings", year: String(year) }),
     getTrainingDetail: (eventId) => post({ action: "getTrainingDetail", eventId }),
     getTrainingMaterials: (eventId) => post({ action: "getMaterialsByEvent", eventId }),

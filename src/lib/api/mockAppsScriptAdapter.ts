@@ -80,6 +80,10 @@ export const mockAppsScriptAdapter: AppsScriptAdapter = {
     switch (payload.action) {
       case "getAppConfig":
         return this.getAppConfig() as Promise<T>;
+      case "getAdminLoginConfig":
+        return this.getAdminLoginConfig() as Promise<T>;
+      case "verifyAdminAccessCode":
+        return this.verifyAdminAccessCode(payload.code) as Promise<T>;
       case "getTrainings":
         return this.getTrainings(Number(payload.year)) as Promise<T>;
       case "getTrainingDetail":
@@ -121,6 +125,22 @@ export const mockAppsScriptAdapter: AppsScriptAdapter = {
 
   async getAppConfig() {
     return APP_CONFIG;
+  },
+
+  async getAdminLoginConfig() {
+    return {
+      adminCodeHint: process.env.ADMIN_CODE_HINT ?? "관리자 기능은 학교 담당자만 사용할 수 있습니다."
+    };
+  },
+
+  async verifyAdminAccessCode(code) {
+    const expectedCode = process.env.ADMIN_ACCESS_CODE?.trim();
+    const inputCode = code.trim();
+
+    return {
+      ok: Boolean(expectedCode && inputCode && inputCode === expectedCode),
+      adminCodeHint: process.env.ADMIN_CODE_HINT ?? "관리자 기능은 학교 담당자만 사용할 수 있습니다."
+    };
   },
 
   async getTrainings(year) {

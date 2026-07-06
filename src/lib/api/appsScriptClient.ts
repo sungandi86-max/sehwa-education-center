@@ -18,6 +18,8 @@ import type {
   AttendanceEligibilityResult,
   AttendanceReportResult,
   AttendanceSummary,
+  AdminAuthResult,
+  AdminLoginConfig,
   UploadCertificateInput,
   UploadCertificateResult
 } from "@/lib/api/appsScriptAdapter";
@@ -221,6 +223,40 @@ export const getTrainingTitle = (eventId: string, trainings: TrainingEventRow[] 
 
 export const appsScriptClient = {
   isLiveConfigured: Boolean(APPS_SCRIPT_API_URL),
+
+  async getAdminLoginConfig(): Promise<AdminLoginConfig> {
+    if (!APPS_SCRIPT_API_URL) {
+      return mockAppsScriptAdapter.getAdminLoginConfig();
+    }
+
+    const config = await postAppsScript<AdminLoginConfig>({ action: "getAdminLoginConfig" });
+
+    return {
+      adminCodeHint: asString(config.adminCodeHint)
+    };
+  },
+
+  async verifyAdminAccessCode(code: string): Promise<AdminAuthResult> {
+    const normalizedCode = code.trim();
+
+    if (!normalizedCode) {
+      return { ok: false };
+    }
+
+    if (!APPS_SCRIPT_API_URL) {
+      return mockAppsScriptAdapter.verifyAdminAccessCode(normalizedCode);
+    }
+
+    const result = await postAppsScript<AdminAuthResult>({
+      action: "verifyAdminAccessCode",
+      code: normalizedCode
+    });
+
+    return {
+      ok: Boolean(result.ok),
+      adminCodeHint: asString(result.adminCodeHint)
+    };
+  },
 
   async getNotices(): Promise<NoticeRow[]> {
     if (!APPS_SCRIPT_API_URL) {

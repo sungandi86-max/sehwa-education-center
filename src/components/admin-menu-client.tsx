@@ -16,11 +16,10 @@ import {
   UsersRound
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { TrainingEventRow } from "@/types/training";
 
 const ADMIN_AUTH_KEY = "sehwa-admin-authenticated";
-const ADMIN_PIN = process.env.NEXT_PUBLIC_ADMIN_PIN || "sehwa-admin";
 
 type AdminMenuClientProps = {
   trainings: TrainingEventRow[];
@@ -93,6 +92,8 @@ export function AdminMenuClient({ trainings }: AdminMenuClientProps) {
   );
   const [pin, setPin] = useState("");
   const [error, setError] = useState("");
+  const [hint, setHint] = useState("");
+  const [isAuthenticating, setIsAuthenticating] = useState(false);
 
   const visibleTrainings = useMemo(
     () =>
@@ -104,16 +105,67 @@ export function AdminMenuClient({ trainings }: AdminMenuClientProps) {
     [trainings]
   );
 
-  const authenticate = () => {
-    if (pin.trim() !== ADMIN_PIN) {
-      setError("관리자 인증 코드를 확인해주세요.");
+  useEffect(() => {
+    if (isAuthenticated) {
       return;
     }
 
-    sessionStorage.setItem(ADMIN_AUTH_KEY, "true");
-    setIsAuthenticated(true);
+    let mounted = true;
+
+    fetch("/api/admin/config", { cache: "no-store" })
+      .then((response) => response.json())
+      .then((result: { data?: { adminCodeHint?: string } }) => {
+        if (!mounted) return;
+        setHint(result.data?.adminCodeHint ?? "");
+      })
+      .catch(() => {
+        if (!mounted) return;
+        setHint("");
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, [isAuthenticated]);
+
+  const authenticate = async () => {
+    const code = pin.trim();
+
+    if (!code || isAuthenticating) {
+      return;
+    }
+
+    setIsAuthenticating(true);
     setError("");
-    setPin("");
+
+    try {
+      const response = await fetch("/api/admin/auth", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ code })
+      });
+      const result = (await response.json()) as { success?: boolean; data?: { ok?: boolean; adminCodeHint?: string }; message?: string };
+
+      if (result.data?.adminCodeHint) {
+        setHint(result.data.adminCodeHint);
+      }
+
+      if (!response.ok || !result.success || !result.data?.ok) {
+        setError("관리자 코드가 일치하지 않습니다.");
+        return;
+      }
+
+      sessionStorage.setItem(ADMIN_AUTH_KEY, "true");
+      setIsAuthenticated(true);
+      setError("");
+      setPin("");
+    } catch {
+      setError("관리자 인증을 확인하지 못했습니다. 잠시 후 다시 시도해주세요.");
+    } finally {
+      setIsAuthenticating(false);
+    }
   };
 
   const signOut = () => {
@@ -147,18 +199,24 @@ export function AdminMenuClient({ trainings }: AdminMenuClientProps) {
               }}
               onKeyDown={(event) => {
                 if (event.key === "Enter") {
-                  authenticate();
+                  void authenticate();
                 }
               }}
               className="h-14 w-full rounded-[18px] border border-slateblue-100 bg-slateblue-50 px-4 text-base font-semibold text-brand-900 outline-none transition focus:border-brand-500 focus:bg-white focus:ring-4 focus:ring-brand-100"
               placeholder="관리자 인증 코드를 입력하세요"
             />
+            {hint ? <p className="rounded-[18px] bg-slateblue-50 px-4 py-3 text-sm font-medium leading-6 text-slate-600">{hint}</p> : null}
             {error ? <p className="text-sm font-semibold text-rose-600">{error}</p> : null}
           </div>
 
           <div className="mt-6 grid gap-2 sm:grid-cols-[1fr_auto]">
-            <button type="button" onClick={authenticate} disabled={!pin.trim()} className="btn-primary min-h-12 disabled:cursor-not-allowed disabled:opacity-45">
-              인증하기
+            <button
+              type="button"
+              onClick={() => void authenticate()}
+              disabled={!pin.trim() || isAuthenticating}
+              className="btn-primary min-h-12 disabled:cursor-not-allowed disabled:opacity-45"
+            >
+              {isAuthenticating ? "확인 중" : "인증하기"}
               <ArrowRight size={18} />
             </button>
             <Link href="/" className="btn-secondary min-h-12">

@@ -32,6 +32,10 @@ function doPost(e) {
     switch (action) {
       case "getAppConfig":
         return jsonOutput(getAppConfig());
+      case "getAdminLoginConfig":
+        return jsonOutput(getAdminLoginConfig());
+      case "verifyAdminAccessCode":
+        return jsonOutput(verifyAdminAccessCode(req));
       case "getNotices":
         return jsonOutput(getNotices());
       case "getTrainings":
@@ -239,6 +243,43 @@ function getAppConfig() {
     if (key) config[key] = valueOf(row, ["value", "값"]);
   });
   return { success: true, data: config };
+}
+
+function getSettingValue(settingKey, fallback) {
+  const rows = safeRows(SHEETS.settings);
+  const normalizedSettingKey = normalizeHeaderKey(settingKey);
+
+  for (let i = 0; i < rows.length; i += 1) {
+    const row = rows[i];
+    const key = stringOf(row, ["key", "설정키"]);
+    if (normalizeHeaderKey(key) === normalizedSettingKey) {
+      return stringOf(row, ["value", "값"], fallback || "");
+    }
+  }
+
+  return fallback || "";
+}
+
+function getAdminLoginConfig() {
+  return {
+    success: true,
+    data: {
+      adminCodeHint: getSettingValue("adminCodeHint", "")
+    }
+  };
+}
+
+function verifyAdminAccessCode(req) {
+  const inputCode = String(req.code || "").trim();
+  const storedCode = String(getSettingValue("adminAccessCode", "") || "").trim();
+
+  return {
+    success: true,
+    data: {
+      ok: Boolean(storedCode && inputCode && inputCode === storedCode),
+      adminCodeHint: getSettingValue("adminCodeHint", "")
+    }
+  };
 }
 
 function getNotices() {
