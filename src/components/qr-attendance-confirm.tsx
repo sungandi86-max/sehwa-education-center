@@ -1,9 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowLeft, Building2, CalendarDays, CheckCircle2, Clock3, Eraser, Home, LoaderCircle, MapPin, PenLine, Search, UserRound } from "lucide-react";
+import { ArrowLeft, Building2, CalendarDays, CheckCircle2, Clock3, Eraser, Home, LoaderCircle, MapPin, PenLine, UserRound } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { MyTrainingLookupModal } from "@/components/my-training-lookup-modal";
 import { useStaffSession, type StaffSession } from "@/components/staff-session-provider";
 
 export interface QrAttendanceEventInfo {
@@ -59,22 +58,24 @@ export function QrAttendanceConfirm({
   events?: QrAttendanceEventInfo[];
   groupId?: string;
 }) {
-  const { staff } = useStaffSession();
+  const { staff, setStaff } = useStaffSession();
   const attendanceEvents = events?.length ? events : event ? [event] : [];
   const isGroup = Boolean(groupId) || attendanceEvents.length > 1;
-  const [isLookupOpen, setIsLookupOpen] = useState(false);
   const [step, setStep] = useState<FlowStep>("confirm");
   const [signature, setSignature] = useState("");
   const [message, setMessage] = useState("");
   const [result, setResult] = useState<AttendanceResult | null>(null);
+  const [confirmedStaff, setConfirmedStaff] = useState<StaffSession | null>(null);
+  const [staffName, setStaffName] = useState(staff?.staffName ?? "");
+  const [department, setDepartment] = useState(staff?.department ?? "");
+  const [matches, setMatches] = useState<StaffSession[]>([]);
+  const [lookupError, setLookupError] = useState("");
+  const [isLookupLoading, setIsLookupLoading] = useState(false);
+  const currentStaff = confirmedStaff ?? staff;
 
-  const goToSignature = async () => {
-    if (!staff) {
-      setIsLookupOpen(true);
-      return;
-    }
-
+  const checkEligibility = async (targetStaff: StaffSession) => {
     setMessage("");
+    setLookupError("");
     setStep("checking");
 
     try {
@@ -88,7 +89,7 @@ export function QrAttendanceConfirm({
           eventId: isGroup ? undefined : attendanceEvents[0]?.eventId,
           eventIds: isGroup ? attendanceEvents.map((item) => item.eventId) : undefined,
           groupId,
-          staffId: staff.staffId
+          staffId: targetStaff.staffId
         })
       });
       const payload = (await response.json()) as EligibilityResult & { message?: string };
@@ -119,9 +120,79 @@ export function QrAttendanceConfirm({
     }
   };
 
+  const applyStaffAndContinue = async (selectedStaff: StaffSession) => {
+    setStaff(selectedStaff);
+    setConfirmedStaff(selectedStaff);
+    setStaffName(selectedStaff.staffName);
+    setDepartment(selectedStaff.department);
+    setMatches([]);
+    await checkEligibility(selectedStaff);
+  };
+
+  const findStaffAndContinue = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (!staffName.trim() && currentStaff) {
+      await applyStaffAndContinue(currentStaff);
+      return;
+    }
+
+    if (!staffName.trim()) {
+      setLookupError("성명을 입력해주세요.");
+      return;
+    }
+
+    setLookupError("");
+    setMatches([]);
+    setIsLookupLoading(true);
+
+    try {
+      const response = await fetch("/api/staff/find", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          name: staffName.trim(),
+          department: department.trim() || undefined
+        })
+      });
+      const payload = (await response.json()) as {
+        success?: boolean;
+        data?: StaffSession[];
+        error?: string;
+      };
+
+      if (!response.ok || !payload.success) {
+        setLookupError(payload.error ?? "교직원 조회 중 오류가 발생했습니다.");
+        return;
+      }
+
+      const found = payload.data ?? [];
+
+      if (found.length === 0) {
+        setLookupError("해당 성명의 교직원을 찾을 수 없습니다.");
+        return;
+      }
+
+      if (found.length === 1) {
+        await applyStaffAndContinue(found[0]);
+        return;
+      }
+
+      setMatches(found);
+      setLookupError("동명이인이 있습니다. 본인의 소속/부서를 선택해주세요.");
+    } catch {
+      setLookupError("교직원 조회 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.");
+    } finally {
+      setIsLookupLoading(false);
+    }
+  };
+
   const submitAttendance = async () => {
-    if (!staff) {
-      setIsLookupOpen(true);
+    if (!currentStaff) {
+      setStep("confirm");
+      setLookupError("성명으로 본인 확인 후 출석을 진행해주세요.");
       return;
     }
 
@@ -145,10 +216,10 @@ export function QrAttendanceConfirm({
           eventId: isGroup ? undefined : attendanceEvents[0]?.eventId,
           eventIds: isGroup ? attendanceEvents.map((item) => item.eventId) : undefined,
           groupId,
-          staffId: staff.staffId,
-          staffName: staff.staffName,
-          department: staff.department,
-          position: staff.position,
+          staffId: currentStaff.staffId,
+          staffName: currentStaff.staffName,
+          department: currentStaff.department,
+          position: currentStaff.position,
           signature
         })
       });
@@ -178,9 +249,16 @@ export function QrAttendanceConfirm({
         <AttendanceConfirmScreen
           events={attendanceEvents}
           isGroup={isGroup}
-          staff={staff}
-          onLookup={() => setIsLookupOpen(true)}
-          onContinue={goToSignature}
+          staff={currentStaff}
+          staffName={staffName}
+          department={department}
+          matches={matches}
+          error={lookupError}
+          isLoading={isLookupLoading}
+          onStaffNameChange={setStaffName}
+          onDepartmentChange={setDepartment}
+          onSelectStaff={(member) => void applyStaffAndContinue(member)}
+          onSubmit={findStaffAndContinue}
         />
       ) : null}
       {step === "checking" ? <CheckingScreen /> : null}
@@ -196,10 +274,9 @@ export function QrAttendanceConfirm({
         />
       ) : null}
       {step === "saving" ? <SavingScreen /> : null}
-      {step === "done" && staff ? (
-        <DoneScreen events={attendanceEvents} staffName={staff.staffName} message={message} result={result} />
+      {step === "done" && currentStaff ? (
+        <DoneScreen events={attendanceEvents} staffName={currentStaff.staffName} message={message} result={result} />
       ) : null}
-      {isLookupOpen ? <MyTrainingLookupModal onClose={() => setIsLookupOpen(false)} /> : null}
     </>
   );
 }
@@ -231,16 +308,31 @@ function AttendanceConfirmScreen({
   events,
   isGroup,
   staff,
-  onLookup,
-  onContinue
+  staffName,
+  department,
+  matches,
+  error,
+  isLoading,
+  onStaffNameChange,
+  onDepartmentChange,
+  onSelectStaff,
+  onSubmit
 }: {
   events: QrAttendanceEventInfo[];
   isGroup: boolean;
   staff: StaffSession | null;
-  onLookup: () => void;
-  onContinue: () => void;
+  staffName: string;
+  department: string;
+  matches: StaffSession[];
+  error: string;
+  isLoading: boolean;
+  onStaffNameChange: (value: string) => void;
+  onDepartmentChange: (value: string) => void;
+  onSelectStaff: (staff: StaffSession) => void;
+  onSubmit: (event: React.FormEvent<HTMLFormElement>) => void;
 }) {
   const mainEvent = events[0];
+  const departmentOptions = Array.from(new Set(matches.map((member) => member.department).filter(Boolean)));
 
   return (
     <section className="app-card animate-soft-in overflow-hidden rounded-[32px]">
@@ -275,52 +367,96 @@ function AttendanceConfirmScreen({
           </div>
         )}
 
-        <StaffBox staff={staff} onLookup={onLookup} />
-
-        <p className="text-center text-lg font-semibold text-brand-900">
-          {isGroup ? `위 ${events.length}개 교육에 출석하시겠습니까?` : "위 교육에 출석하시겠습니까?"}
-        </p>
-
-        <div className="grid gap-3">
-          <button type="button" onClick={onContinue} className="btn-primary">
-            출석하기
-          </button>
-          <Link href="/" className="btn-secondary">
-            취소
-          </Link>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function StaffBox({ staff, onLookup }: { staff: StaffSession | null; onLookup: () => void }) {
-  return (
-    <div className="rounded-[28px] border border-slateblue-100 bg-gradient-to-br from-white to-slateblue-50 p-5 shadow-[0_12px_30px_rgba(23,59,115,0.04)]">
-      {staff ? (
-        <div className="flex items-center gap-3">
-          <div className="flex size-14 items-center justify-center rounded-[22px] bg-white text-brand-900 shadow-soft">
-            <UserRound size={22} />
+        <form onSubmit={onSubmit} className="rounded-[24px] border border-slateblue-100 bg-slateblue-50/70 p-5">
+          <div className="flex items-start gap-3">
+            <div className="flex size-11 shrink-0 items-center justify-center rounded-full bg-white text-brand-900 shadow-soft">
+              <UserRound size={21} />
+            </div>
+            <div>
+              <h2 className="text-lg font-extrabold text-brand-900">출석자 확인</h2>
+              <p className="mt-1 text-sm leading-6 text-slate-500">성명으로 조회하고, 동명이인 구분이 필요할 때만 소속/부서를 선택합니다.</p>
+            </div>
           </div>
-          <div>
-            <p className="text-lg font-semibold text-brand-900">{staff.staffName} 선생님</p>
-            <p className="mt-1 text-sm text-slate-500">
-              {staff.department}
+
+          <div className="mt-5 grid gap-3 sm:grid-cols-[1fr_0.9fr]">
+            <label className="block">
+              <span className="text-sm font-semibold text-brand-900">성명 *</span>
+              <input
+                value={staffName}
+                onChange={(event) => onStaffNameChange(event.target.value)}
+                className="input-soft mt-2 w-full"
+                placeholder="성명을 입력해주세요"
+                autoComplete="name"
+                required
+              />
+            </label>
+
+            <label className="block">
+              <span className="text-sm font-semibold text-brand-900">소속/부서</span>
+              <input
+                value={department}
+                onChange={(event) => onDepartmentChange(event.target.value)}
+                className="input-soft mt-2 w-full"
+                placeholder="동명이인 구분이 필요할 때만 선택"
+                list={departmentOptions.length > 0 ? "qr-department-options" : undefined}
+              />
+              {departmentOptions.length > 0 ? (
+                <datalist id="qr-department-options">
+                  {departmentOptions.map((option) => (
+                    <option key={option} value={option} />
+                  ))}
+                </datalist>
+              ) : null}
+            </label>
+          </div>
+
+          {staff ? (
+            <p className="mt-3 rounded-2xl bg-white px-4 py-3 text-sm font-semibold text-slate-600">
+              현재 확인된 교직원: <span className="text-brand-900">{staff.staffName}</span>
+              {staff.department ? ` · ${staff.department}` : ""}
+              {staff.position ? ` · ${staff.position}` : ""}
               {staff.staffId ? ` · ${staff.staffId}` : ""}
             </p>
+          ) : null}
+
+          {error ? <p className="mt-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800">{error}</p> : null}
+
+          {matches.length > 1 ? (
+            <div className="mt-3 space-y-2 rounded-[20px] border border-slateblue-100 bg-white/80 p-3">
+              {matches.map((member) => (
+                <button
+                  key={`${member.staffId}-${member.department}`}
+                  type="button"
+                  onClick={() => onSelectStaff(member)}
+                  className="flex w-full items-center justify-between gap-3 rounded-2xl border border-slateblue-100 bg-white px-4 py-3 text-left hover:border-brand-200 hover:bg-brand-50"
+                >
+                  <span>
+                    <span className="font-bold text-brand-900">{member.staffName}</span>
+                    <span className="ml-2 text-sm text-slate-500">
+                      {member.department}
+                      {member.position ? ` · ${member.position}` : ""}
+                      {member.staffId ? ` · ${member.staffId}` : ""}
+                    </span>
+                  </span>
+                  <span className="shrink-0 text-sm font-bold text-brand-900">선택</span>
+                </button>
+              ))}
+            </div>
+          ) : null}
+
+          <p className="mt-4 text-sm leading-6 text-slate-500">출석하기를 누르면 대상 여부와 중복 출석 여부를 확인한 뒤 전자서명을 진행합니다.</p>
+
+          <div className="mt-5 grid gap-3 sm:grid-cols-[0.7fr_1.3fr]">
+            <Link href="/" className="btn-secondary">
+              취소
+            </Link>
+            <button type="submit" disabled={(!staffName.trim() && !staff) || isLoading} className="btn-primary min-h-14">
+              {isLoading ? "확인 중..." : "출석하기"}
+            </button>
           </div>
-        </div>
-      ) : (
-        <div>
-          <p className="font-semibold text-brand-900">출석 전 본인 확인이 필요합니다.</p>
-          <p className="mt-2 text-sm leading-6 text-slate-500">성명으로 교직원을 조회한 뒤 출석을 진행해주세요.</p>
-          <button type="button" onClick={onLookup} className="btn-secondary mt-4 w-full">
-            <Search size={17} />
-            교직원 조회
-          </button>
-        </div>
-      )}
-    </div>
+        </form>
+      </div>
+    </section>
   );
 }
 

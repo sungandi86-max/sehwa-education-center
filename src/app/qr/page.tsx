@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { ArrowLeft, Camera, ChevronRight, ClipboardList, Printer, QrCode } from "lucide-react";
+import { ArrowLeft, ChevronRight, ClipboardList, Printer, QrCode } from "lucide-react";
+import { QrScanLauncher } from "@/components/qr-scan-launcher";
 import { StatusBadge } from "@/components/ui";
 import { appsScriptClient } from "@/lib/api/appsScriptClient";
 
@@ -37,29 +38,7 @@ export default async function QrPortalPage() {
         <div className="size-11" aria-hidden />
       </div>
 
-      <section className="app-card overflow-hidden bg-gradient-to-br from-white via-white to-[#EEF5FF] p-5 md:p-6">
-        <div className="flex items-start gap-4">
-          <div className="flex size-14 shrink-0 items-center justify-center rounded-[22px] bg-gradient-to-br from-[#5E6CFF] to-[#3650D8] text-white shadow-[0_16px_34px_rgba(54,80,216,0.2)]">
-            <Camera size={27} strokeWidth={1.8} />
-          </div>
-          <div className="min-w-0">
-            <h2 className="text-[1.45rem] font-semibold tracking-tight text-brand-900">QR 스캔을 시작하세요</h2>
-            <p className="mt-2 text-sm font-medium leading-6 text-slate-500">
-              연수장에 비치된 QR 코드를 휴대폰 카메라로 스캔하여 출석을 진행하세요.
-            </p>
-          </div>
-        </div>
-
-        <div className="mt-5 grid gap-2.5">
-          <button type="button" className="btn-primary">
-            <span aria-hidden>📷</span>
-            QR 스캔 시작
-          </button>
-          <Link href="/my" className="btn-secondary">
-            내 이수현황으로 이동
-          </Link>
-        </div>
-      </section>
+      <QrScanLauncher />
 
       <section className="app-card p-4 md:p-5">
         <div className="mb-3 flex items-center justify-between">
