@@ -8,9 +8,9 @@ import { HomeHeaderActions } from "@/components/home-staff-widgets";
 
 const navigation = [
   { href: "/", label: "홈" },
-  { href: "/qr", label: "QR 출석" },
   { href: "/upload", label: "이수증 제출" },
-  { href: "/my", label: "내 이수현황" }
+  { href: "/my", label: "내 이수현황" },
+  { href: "/admin", label: "관리자" }
 ];
 
 export function AppHeader() {

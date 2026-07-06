@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ArrowRight, Bell, FileUp, QrCode, ShieldCheck, UserRound } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { appsScriptClient, type NoticeRow } from "@/lib/api/appsScriptClient";
 
 const noticeDate = (notice: NoticeRow) => notice.공지일 ?? notice.노출시작일 ?? "";
@@ -11,16 +12,6 @@ export default async function PortalHomePage() {
     .sort((a, b) => noticeDate(b).localeCompare(noticeDate(a)))[0];
 
   const portalCards = [
-    {
-      title: "QR 출석",
-      description: "연수장에서 QR을 스캔하고 전자서명합니다.",
-      action: "출석하기",
-      href: "/qr",
-      icon: QrCode,
-      surface: "from-white via-[#F8FBFF] to-[#ECF5FF]",
-      iconTone: "from-[#5E6CFF] to-[#3650D8]",
-      actionTone: "text-[#4D55E8]"
-    },
     {
       title: "이수증 제출",
       description: "외부 연수 이수증을 업로드합니다.",
@@ -40,6 +31,15 @@ export default async function PortalHomePage() {
       surface: "from-white via-[#FFFBFD] to-[#FFF0F6]",
       iconTone: "from-[#F46AA8] to-[#E83E8D]",
       actionTone: "text-[#E83E8D]"
+    },
+    {
+      title: "현장 QR 안내",
+      description: "연수장에 비치된 QR을 휴대폰 카메라로 스캔해 출석합니다.",
+      action: "현장에서 스캔",
+      icon: QrCode,
+      surface: "from-white via-[#F8FBFF] to-[#ECF5FF]",
+      iconTone: "from-[#5E6CFF] to-[#3650D8]",
+      actionTone: "text-[#4D55E8]"
     }
   ];
 
@@ -67,7 +67,7 @@ export default async function PortalHomePage() {
 
           <section className="grid gap-2.5 md:grid-cols-3 md:gap-5">
             {portalCards.map((card) => (
-              <PortalCard key={card.href} {...card} />
+              <PortalCard key={card.title} {...card} />
             ))}
           </section>
 
@@ -99,17 +99,13 @@ function PortalCard({
   title: string;
   description: string;
   action: string;
-  href: string;
-  icon: typeof QrCode;
+  href?: string;
+  icon: LucideIcon;
   surface: string;
   iconTone: string;
   actionTone: string;
 }) {
-  return (
-    <Link
-      href={href}
-      className={`group relative flex min-h-[104px] overflow-hidden rounded-[24px] border border-slateblue-100 bg-gradient-to-br ${surface} p-4 shadow-[0_14px_38px_rgba(23,59,115,0.065),0_3px_10px_rgba(23,59,115,0.03)] transition duration-[250ms] ease-out hover:-translate-y-1 hover:border-brand-900 hover:shadow-[0_28px_80px_rgba(23,59,115,0.13),0_6px_20px_rgba(23,59,115,0.06)] md:min-h-[236px] md:rounded-[32px] md:p-7`}
-    >
+  const cardBody = (
       <div className="grid w-full grid-cols-[44px_1fr_22px] items-center gap-3 md:flex md:flex-col md:items-stretch">
         <div className={`flex size-11 shrink-0 items-center justify-center rounded-[17px] bg-gradient-to-br ${iconTone} text-white shadow-[0_12px_24px_rgba(23,59,115,0.14)] ring-1 ring-white/80 md:size-16 md:rounded-[22px]`}>
           <Icon size={24} strokeWidth={1.75} className="md:size-[33px]" />
@@ -127,6 +123,21 @@ function PortalCard({
           <ArrowRight className={`transition duration-[250ms] ease-out group-hover:translate-x-1 ${actionTone}`} size={22} />
         </div>
       </div>
-    </Link>
+  );
+
+  const className = `group relative flex min-h-[104px] overflow-hidden rounded-[24px] border border-slateblue-100 bg-gradient-to-br ${surface} p-4 shadow-[0_14px_38px_rgba(23,59,115,0.065),0_3px_10px_rgba(23,59,115,0.03)] transition duration-[250ms] ease-out hover:-translate-y-1 hover:border-brand-900 hover:shadow-[0_28px_80px_rgba(23,59,115,0.13),0_6px_20px_rgba(23,59,115,0.06)] md:min-h-[236px] md:rounded-[32px] md:p-7`;
+
+  if (href) {
+    return (
+      <Link href={href} className={className}>
+        {cardBody}
+      </Link>
+    );
+  }
+
+  return (
+    <div className={className} role="note" aria-label={title}>
+      {cardBody}
+    </div>
   );
 }
