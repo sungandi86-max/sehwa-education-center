@@ -42,7 +42,7 @@ export async function POST(request: Request) {
 
     if (!result.ok) {
       return NextResponse.json(
-        { message: result.message || "출석 정보를 저장하지 못했습니다. 잠시 후 다시 시도해주세요." },
+        { ...result, message: result.message || "출석 정보를 저장하지 못했습니다. 잠시 후 다시 시도해주세요." },
         { status: 400 }
       );
     }

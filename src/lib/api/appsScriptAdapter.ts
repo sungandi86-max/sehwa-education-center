@@ -49,7 +49,7 @@ export interface CheckAttendanceEligibilityInput {
   staffId: string;
 }
 
-export type AttendanceEligibilityStatus = "can_sign" | "already_attended" | "not_target" | "signature_excluded";
+export type AttendanceEligibilityStatus = "can_sign" | "already_attended" | "not_target" | "signature_excluded" | "not_open" | "closed";
 
 export interface AttendanceEligibilityItem {
   eventId: string;
@@ -58,6 +58,10 @@ export interface AttendanceEligibilityItem {
   status: AttendanceEligibilityStatus;
   attendanceId?: string;
   message: string;
+  detail?: string;
+  signatureOpenAt?: string;
+  signatureCloseAt?: string;
+  signatureWindowText?: string;
 }
 
 export interface AttendanceEligibilityResult {
@@ -68,6 +72,8 @@ export interface AttendanceEligibilityResult {
   alreadyCount: number;
   notTargetCount: number;
   excludedCount: number;
+  notOpenCount: number;
+  closedCount: number;
   blockedCount: number;
   results: AttendanceEligibilityItem[];
 }
@@ -97,7 +103,7 @@ export interface SubmitAttendanceResult {
   ok: boolean;
   attendanceId?: string;
   message: string;
-  status?: "completed" | "already" | "notTarget" | "excluded" | "notFound";
+  status?: "completed" | "already" | "notTarget" | "excluded" | "notFound" | "notOpen" | "closed";
   eventId?: string;
   attendedAt?: string;
   completedCount?: number;
@@ -106,6 +112,10 @@ export interface SubmitAttendanceResult {
   signatureId?: string;
   signatureFileId?: string;
   signatureImageUrl?: string;
+  detail?: string;
+  signatureOpenAt?: string;
+  signatureCloseAt?: string;
+  signatureWindowText?: string;
 }
 
 export interface SubmitGroupAttendanceResult {
@@ -114,6 +124,8 @@ export interface SubmitGroupAttendanceResult {
   completedCount: number;
   skippedCount: number;
   blockedCount?: number;
+  notOpenCount?: number;
+  closedCount?: number;
   results: SubmitAttendanceResult[];
 }
 

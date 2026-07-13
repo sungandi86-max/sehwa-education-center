@@ -8,15 +8,18 @@ import { useStaffSession, type StaffSession } from "@/components/staff-session-p
 export interface QrAttendanceEventInfo {
   eventId: string;
   title: string;
+  subtitle?: string;
   date: string;
   time: string;
   location: string;
   department: string;
+  signatureWindow?: string;
+  notice?: string;
 }
 
 type FlowStep = "confirm" | "checking" | "signature" | "saving" | "done";
-type AttendanceStatus = "completed" | "already" | "notTarget" | "excluded" | "notFound";
-type EligibilityStatus = "can_sign" | "already_attended" | "not_target" | "signature_excluded";
+type AttendanceStatus = "completed" | "already" | "notTarget" | "excluded" | "notFound" | "notOpen" | "closed";
+type EligibilityStatus = "can_sign" | "already_attended" | "not_target" | "signature_excluded" | "not_open" | "closed";
 
 interface AttendanceResult {
   message?: string;
@@ -28,9 +31,13 @@ interface AttendanceResult {
     eventId?: string;
     status?: AttendanceStatus;
     message?: string;
+    detail?: string;
+    signatureWindowText?: string;
     attendedAt?: string;
   }[];
   attendedAt?: string;
+  detail?: string;
+  signatureWindowText?: string;
 }
 
 interface EligibilityResult {
@@ -41,11 +48,15 @@ interface EligibilityResult {
   alreadyCount: number;
   notTargetCount: number;
   excludedCount: number;
+  notOpenCount: number;
+  closedCount: number;
   blockedCount: number;
   results?: {
     eventId?: string;
     status?: EligibilityStatus;
     message?: string;
+    detail?: string;
+    signatureWindowText?: string;
   }[];
 }
 
@@ -286,12 +297,16 @@ function createResultFromEligibility(payload: EligibilityResult): AttendanceResu
     can_sign: "completed",
     already_attended: "already",
     not_target: "notTarget",
-    signature_excluded: "excluded"
+    signature_excluded: "excluded",
+    not_open: "notOpen",
+    closed: "closed"
   };
   const results = payload.results?.map((item) => ({
     eventId: item.eventId,
     status: item.status ? statusMap[item.status] : statusMap[payload.status],
-    message: item.message
+    message: item.detail ?? item.message,
+    detail: item.detail,
+    signatureWindowText: item.signatureWindowText
   }));
 
   return {
@@ -299,7 +314,7 @@ function createResultFromEligibility(payload: EligibilityResult): AttendanceResu
     status: statusMap[payload.status],
     completedCount: 0,
     skippedCount: payload.alreadyCount,
-    blockedCount: payload.notTargetCount + payload.excludedCount,
+    blockedCount: payload.notTargetCount + payload.excludedCount + payload.notOpenCount + payload.closedCount,
     results
   };
 }
@@ -341,6 +356,7 @@ function AttendanceConfirmScreen({
         <h1 className="mt-3 text-[1.85rem] font-semibold leading-tight tracking-tight text-brand-900">
           {isGroup ? "한 번의 서명으로 여러 교육에 출석합니다." : mainEvent.title}
         </h1>
+        {!isGroup && mainEvent.subtitle ? <p className="mt-2 text-base font-semibold text-brand-700">{mainEvent.subtitle}</p> : null}
         {isGroup ? (
           <p className="mt-3 text-sm leading-7 text-slate-600">이번 서명으로 아래 교육에 출석 처리됩니다.</p>
         ) : null}
@@ -356,6 +372,8 @@ function AttendanceConfirmScreen({
                 <p className="mt-2 text-sm leading-6 text-slate-500">
                   {item.date} {item.time} · {item.location} · {item.department}
                 </p>
+                {item.signatureWindow ? <p className="mt-2 text-sm font-semibold text-brand-700">서명 가능 시간 {item.signatureWindow}</p> : null}
+                {item.notice ? <p className="mt-2 rounded-2xl bg-white/76 px-3 py-2 text-sm font-medium leading-6 text-slate-600">안내 {item.notice}</p> : null}
               </div>
             ))}
           </div>
@@ -364,8 +382,16 @@ function AttendanceConfirmScreen({
             <InfoRow label="일시" value={`${mainEvent.date} ${mainEvent.time}`} />
             <InfoRow label="장소" value={mainEvent.location} />
             <InfoRow label="담당부서" value={mainEvent.department} />
+            <InfoRow label="서명 가능 시간" value={mainEvent.signatureWindow || "교육 진행 시간 기준"} />
           </div>
         )}
+
+        {!isGroup && mainEvent.notice ? (
+          <div className="rounded-[24px] border border-brand-100 bg-brand-50/60 p-4">
+            <p className="text-sm font-bold text-brand-900">안내</p>
+            <p className="mt-1 text-sm leading-6 text-slate-600">{mainEvent.notice}</p>
+          </div>
+        ) : null}
 
         <form onSubmit={onSubmit} className="rounded-[24px] border border-slateblue-100 bg-slateblue-50/70 p-5">
           <div className="flex items-start gap-3">
@@ -571,29 +597,34 @@ function DoneScreen({
 }) {
   const completedCount = result?.completedCount ?? (result?.status === "completed" ? 1 : 0);
   const skippedCount = result?.skippedCount ?? (result?.status === "already" ? 1 : 0);
-  const blockedCount = result?.blockedCount ?? (result?.status === "notTarget" || result?.status === "excluded" || result?.status === "notFound" ? 1 : 0);
+  const blockedCount = result?.blockedCount ?? (result?.status === "notTarget" || result?.status === "excluded" || result?.status === "notFound" || result?.status === "notOpen" || result?.status === "closed" ? 1 : 0);
   const resultByEventId = new Map((result?.results ?? []).map((item) => [item.eventId, item]));
   const title = getDoneTitle(result?.status, completedCount, skippedCount, blockedCount);
-  const showCounts = completedCount > 0 || skippedCount > 0;
+  const showCounts = completedCount > 0 || skippedCount > 0 || blockedCount > 0;
   const isAlreadyOnly = skippedCount > 0 && completedCount === 0 && blockedCount === 0;
+  const isTimeBlocked = result?.status === "closed" || result?.status === "notOpen";
   const primaryEvent = events[0];
   const firstResultWithTime = result?.results?.find((item) => item.attendedAt);
   const attendedAt = formatAttendanceTime(result?.attendedAt || firstResultWithTime?.attendedAt);
   const successDetail =
     isAlreadyOnly
       ? "이미 저장된 출석 기록이 확인되었습니다. 추가 전자서명은 필요하지 않습니다."
-      : completedCount > 0 && primaryEvent
+      : isTimeBlocked
+        ? result.detail ?? message
+        : completedCount > 0 && primaryEvent
       ? `${primaryEvent.title} 출석이 정상적으로 저장되었습니다.`
       : message;
 
   return (
     <section className="app-card animate-soft-in overflow-hidden text-center">
       <div className="bg-gradient-to-br from-emerald-50 via-white to-brand-50 px-6 py-8 sm:px-8">
-        <div className="mx-auto flex size-20 animate-[success-pop_0.26s_ease-out] items-center justify-center rounded-[28px] bg-white text-emerald-600 shadow-soft">
-          <CheckCircle2 size={42} strokeWidth={2.3} />
+        <div className={`mx-auto flex size-20 animate-[success-pop_0.26s_ease-out] items-center justify-center rounded-[28px] bg-white shadow-soft ${isTimeBlocked ? "text-amber-600" : "text-emerald-600"}`}>
+          {isTimeBlocked ? <Clock3 size={42} strokeWidth={2.3} /> : <CheckCircle2 size={42} strokeWidth={2.3} />}
         </div>
         <h2 className="mt-6 text-[1.65rem] font-semibold leading-tight text-brand-900 sm:text-3xl">{title}</h2>
-        <p className="mt-3 text-base font-semibold leading-7 text-slate-700">감사합니다, {staffName} 선생님.</p>
+        <p className="mt-3 text-base font-semibold leading-7 text-slate-700">
+          {isTimeBlocked ? "담당자 확인이 필요한 경우 담당부서로 문의해주세요." : `감사합니다, ${staffName} 선생님.`}
+        </p>
         <p className="mx-auto mt-1 max-w-sm text-sm font-medium leading-6 text-slate-500">
           {successDetail}
         </p>
@@ -638,6 +669,7 @@ function DoneScreen({
                   </div>
                 </div>
                 {eventResult?.message ? <p className="mt-2 text-sm font-medium text-slate-600">{eventResult.message}</p> : null}
+                {eventResult?.signatureWindowText ? <p className="mt-2 text-sm font-semibold text-brand-700">서명 가능 시간 {eventResult.signatureWindowText}</p> : null}
               </div>
             );
           })}
@@ -646,9 +678,9 @@ function DoneScreen({
         <div className="mt-5 rounded-[22px] bg-white/80 p-4 text-left text-sm leading-6 text-slate-500 ring-1 ring-slateblue-100">
           {attendedAt ? <p className="font-bold text-brand-900">출석시간 {attendedAt}</p> : null}
           <p className={attendedAt ? "mt-1" : ""}>
-            {isAlreadyOnly ? "기존 출석 기록이 확인되었습니다." : "전자서명과 출석 시간이 저장되었습니다."}
+            {isTimeBlocked ? "전자서명 화면으로 이동하지 않습니다." : isAlreadyOnly ? "기존 출석 기록이 확인되었습니다." : "전자서명과 출석 시간이 저장되었습니다."}
           </p>
-          <p>{isAlreadyOnly ? "중복 서명 없이 출석 완료 상태를 유지합니다." : "최종 서명부 생성 시 증빙 자료로 사용됩니다."}</p>
+          <p>{isTimeBlocked ? "서명 가능 시간을 확인한 뒤 다시 시도해주세요." : isAlreadyOnly ? "중복 서명 없이 출석 완료 상태를 유지합니다." : "최종 서명부 생성 시 증빙 자료로 사용됩니다."}</p>
         </div>
 
         <div className="mt-6 grid gap-3 sm:grid-cols-2">
@@ -688,6 +720,8 @@ function EventMeta({ icon, value }: { icon: ReactNode; value: string }) {
 function getDoneTitle(status: AttendanceStatus | undefined, completedCount: number, skippedCount: number, blockedCount: number) {
   if (completedCount > 0) return "출석이 완료되었습니다.";
   if (skippedCount > 0 && blockedCount === 0) return "이미 출석 완료";
+  if (status === "closed") return "지금은 서명할 수 없습니다.";
+  if (status === "notOpen") return "아직 서명할 수 없습니다.";
   if (status === "notTarget") return "이 교육의 대상자가 아닙니다.";
   if (status === "excluded") return "사전 서명 제외 대상입니다.";
   return "출석 처리 결과";
@@ -697,6 +731,8 @@ function getStatusLabel(status: AttendanceStatus | undefined) {
   if (status === "already") return "이미 출석";
   if (status === "completed") return "완료";
   if (status === "excluded") return "서명 제외";
+  if (status === "closed") return "시간 종료";
+  if (status === "notOpen") return "시작 전";
   if (status === "notTarget") return "비대상";
   return "처리 불가";
 }

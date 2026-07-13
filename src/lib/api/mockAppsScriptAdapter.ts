@@ -213,6 +213,11 @@ export const mockAppsScriptAdapter: AppsScriptAdapter = {
   async checkAttendanceEligibility(input: CheckAttendanceEligibilityInput): Promise<AttendanceEligibilityResult> {
     const eventIds = input.mode === "group" ? input.eventIds ?? [] : input.eventId ? [input.eventId] : [];
     const results = eventIds.map((eventId) => {
+      const timeBlock = getSignatureTimeBlock(eventId);
+      if (timeBlock) {
+        return timeBlock;
+      }
+
       const duplicated = mockAttendances.find((row) => row.eventId === eventId && getStaffId(row) === input.staffId);
 
       if (duplicated) {
@@ -236,16 +241,31 @@ export const mockAppsScriptAdapter: AppsScriptAdapter = {
     });
     const canSignCount = results.filter((result) => result.status === "can_sign").length;
     const alreadyCount = results.filter((result) => result.status === "already_attended").length;
+    const notOpenCount = results.filter((result) => result.status === "not_open").length;
+    const closedCount = results.filter((result) => result.status === "closed").length;
+    const blockedCount = notOpenCount + closedCount;
+    const status =
+      canSignCount > 0
+        ? "can_sign"
+        : alreadyCount > 0 && alreadyCount === results.length
+          ? "already_attended"
+          : notOpenCount > 0 && notOpenCount === results.length
+            ? "not_open"
+            : closedCount > 0 && closedCount === results.length
+              ? "closed"
+              : "closed";
 
     return {
       eligible: canSignCount > 0,
-      status: canSignCount > 0 ? "can_sign" : "already_attended",
-      message: canSignCount > 0 ? "전자서명이 필요합니다." : "이미 출석 처리되었습니다.",
+      status,
+      message: getMockEligibilityMessage(status, canSignCount, alreadyCount, blockedCount),
       canSignCount,
       alreadyCount,
       notTargetCount: 0,
       excludedCount: 0,
-      blockedCount: 0,
+      notOpenCount,
+      closedCount,
+      blockedCount,
       results
     };
   },
@@ -258,13 +278,21 @@ export const mockAppsScriptAdapter: AppsScriptAdapter = {
     if (input.mode === "group") {
       const completedCount = results.filter((result) => result.ok && result.status === "completed").length;
       const skippedCount = results.filter((result) => result.ok && result.status === "already").length;
+      const blockedCount = results.filter((result) => result.status === "notTarget" || result.status === "excluded" || result.status === "notFound" || result.status === "notOpen" || result.status === "closed").length;
+      const notOpenCount = results.filter((result) => result.status === "notOpen").length;
+      const closedCount = results.filter((result) => result.status === "closed").length;
+      const ok = completedCount > 0 || skippedCount > 0;
+      const blockedMessage = notOpenCount > 0 && closedCount === 0 ? "아직 서명할 수 없습니다." : "서명 가능 시간이 종료되어 출석을 저장하지 못했습니다.";
 
       return {
-        ok: results.every((result) => result.ok),
+        ok,
         completedCount,
         skippedCount,
+        blockedCount,
+        notOpenCount,
+        closedCount,
         results,
-        message: `출석 완료 ${completedCount}건, 이미 처리됨 ${skippedCount}건`
+        message: ok ? `출석 완료 ${completedCount}건, 이미 처리됨 ${skippedCount}건` : blockedMessage
       };
     }
 
@@ -353,6 +381,20 @@ function submitSingleAttendance(eventId: string, staffId: string, signatureId: s
     };
   }
 
+  const timeBlock = getSignatureTimeBlock(eventId);
+  if (timeBlock) {
+    return {
+      ok: false,
+      eventId,
+      status: timeBlock.status === "not_open" ? "notOpen" : "closed",
+      message: timeBlock.status === "not_open" ? "아직 서명할 수 없습니다." : "서명 가능 시간이 종료되어 출석을 저장하지 못했습니다.",
+      detail: timeBlock.detail,
+      signatureOpenAt: timeBlock.signatureOpenAt,
+      signatureCloseAt: timeBlock.signatureCloseAt,
+      signatureWindowText: timeBlock.signatureWindowText
+    };
+  }
+
   const duplicated = mockAttendances.find((row) => row.eventId === eventId && getStaffId(row) === staffId);
 
   if (duplicated) {
@@ -391,4 +433,67 @@ function submitSingleAttendance(eventId: string, staffId: string, signatureId: s
     signatureFileId: "MOCK-SIGNATURE-FILE",
     signatureImageUrl: "#"
   };
+}
+
+function getSignatureTimeBlock(eventId: string) {
+  const event = trainingEvents.find((item) => item.eventId === eventId);
+  if (!event || (!event.signatureOpenAt && !event.signatureCloseAt)) return null;
+
+  const now = Date.now();
+  const openAt = event.signatureOpenAt ? new Date(event.signatureOpenAt).getTime() : Number.NEGATIVE_INFINITY;
+  const closeAt = event.signatureCloseAt ? new Date(event.signatureCloseAt).getTime() : Number.POSITIVE_INFINITY;
+  const windowText = formatSignatureWindow(event.signatureOpenAt, event.signatureCloseAt);
+
+  if (Number.isFinite(openAt) && now < openAt) {
+    return {
+      eventId,
+      trainingTitle: getTrainingTitle(eventId),
+      eligible: false,
+      status: "not_open" as const,
+      message: "아직 서명할 수 없습니다.",
+      detail: `서명 가능 시간은 ${formatClock(event.signatureOpenAt)}부터입니다.`,
+      signatureOpenAt: event.signatureOpenAt,
+      signatureCloseAt: event.signatureCloseAt,
+      signatureWindowText: windowText
+    };
+  }
+
+  if (Number.isFinite(closeAt) && now > closeAt) {
+    return {
+      eventId,
+      trainingTitle: getTrainingTitle(eventId),
+      eligible: false,
+      status: "closed" as const,
+      message: "지금은 서명할 수 없습니다.",
+      detail: `서명 가능 시간이 종료되었습니다. (${formatClock(event.signatureCloseAt)}까지)`,
+      signatureOpenAt: event.signatureOpenAt,
+      signatureCloseAt: event.signatureCloseAt,
+      signatureWindowText: windowText
+    };
+  }
+
+  return null;
+}
+
+function getMockEligibilityMessage(status: "can_sign" | "already_attended" | "not_open" | "closed", canSignCount: number, alreadyCount: number, blockedCount: number) {
+  if (status === "can_sign") {
+    return alreadyCount > 0 || blockedCount > 0 ? "서명 가능한 교육만 출석 처리합니다." : "전자서명이 필요합니다.";
+  }
+  if (status === "already_attended") return "이미 출석 처리되었습니다.";
+  if (status === "not_open") return "아직 서명할 수 없습니다.";
+  return "지금은 서명할 수 없습니다.";
+}
+
+function formatSignatureWindow(openAt?: string, closeAt?: string) {
+  if (!openAt && !closeAt) return "";
+  if (openAt && closeAt) return `${formatClock(openAt)} ~ ${formatClock(closeAt)}`;
+  if (openAt) return `${formatClock(openAt)}부터`;
+  return `${formatClock(closeAt)}까지`;
+}
+
+function formatClock(value?: string) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
 }

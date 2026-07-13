@@ -17,16 +17,27 @@ const formatTimeOnly = (value: string) =>
   new Intl.DateTimeFormat("ko-KR", {
     hour: "2-digit",
     minute: "2-digit",
+    hour12: false,
     timeZone: "Asia/Seoul"
   }).format(new Date(value));
+
+const formatSignatureWindow = (openAt?: string, closeAt?: string) => {
+  if (openAt && closeAt) return `${formatTimeOnly(openAt)} ~ ${formatTimeOnly(closeAt)}`;
+  if (openAt) return `${formatTimeOnly(openAt)}부터`;
+  if (closeAt) return `${formatTimeOnly(closeAt)}까지`;
+  return "";
+};
 
 const toQrEvent = (event: TrainingEventRow): QrAttendanceEventInfo => ({
   eventId: event.eventId,
   title: event.제목,
+  subtitle: event.attendanceSubtitle || "연수 참여 전자서명",
   date: formatDateOnly(event.시작일시),
   time: `${formatTimeOnly(event.시작일시)} - ${formatTimeOnly(event.종료일시)}`,
   location: event.장소,
-  department: event.담당부서
+  department: event.담당부서,
+  signatureWindow: formatSignatureWindow(event.signatureOpenAt, event.signatureCloseAt),
+  notice: event.attendanceNotice
 });
 
 export default async function GroupQrAttendancePage({ params }: { params: Promise<{ groupId: string }> }) {

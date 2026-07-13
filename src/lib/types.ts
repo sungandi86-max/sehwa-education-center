@@ -44,6 +44,10 @@ export interface TrainingEventRow {
   상태: TrainingStatus;
   필수여부: boolean;
   설명?: string;
+  signatureOpenAt?: string;
+  signatureCloseAt?: string;
+  attendanceSubtitle?: string;
+  attendanceNotice?: string;
   folderMode: FolderMode;
   담당자드라이브폴더ID?: string;
   담당자드라이브폴더URL?: string;

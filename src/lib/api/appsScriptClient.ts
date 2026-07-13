@@ -193,6 +193,10 @@ const normalizeTraining = (row: RawRecord): TrainingEventRow => ({
   상태: normalizeTrainingStatus(row.상태),
   필수여부: asString(row.필수여부, "TRUE") !== "FALSE",
   설명: asString(row.교육내용 ?? row.설명),
+  signatureOpenAt: asString(row.signatureOpenAt ?? row.서명시작일시 ?? row.서명가능시작일시 ?? row.서명시작),
+  signatureCloseAt: asString(row.signatureCloseAt ?? row.서명종료일시 ?? row.서명가능종료일시 ?? row.서명종료),
+  attendanceSubtitle: asString(row.attendanceSubtitle ?? row.출석화면부제목 ?? row.출석부제목),
+  attendanceNotice: asString(row.attendanceNotice ?? row.출석화면안내문 ?? row.출석안내문),
   folderMode: asString(row.folderMode, "eventOwnerFolder") as TrainingEventRow["folderMode"],
   담당자드라이브폴더ID: asString(row.담당자드라이브폴더ID),
   담당자드라이브폴더URL: asString(row.담당자드라이브폴더URL),
@@ -813,7 +817,7 @@ async function submitGroupQrAttendanceToAppsScript(input: SubmitQrAttendanceInpu
     : [];
   const completedCount = Number(data.completedCount ?? results.filter((item) => item.status === "completed").length);
   const skippedCount = Number(data.skippedCount ?? results.filter((item) => item.status === "already").length);
-  const blockedCount = Number(data.blockedCount ?? results.filter((item) => item.status === "notTarget" || item.status === "excluded").length);
+  const blockedCount = Number(data.blockedCount ?? results.filter((item) => item.status === "notTarget" || item.status === "excluded" || item.status === "notOpen" || item.status === "closed").length);
   const message = result.message ?? `출석 완료 ${completedCount}건, 이미 출석 처리 ${skippedCount}건`;
 
   if (!result.success) {
@@ -882,9 +886,10 @@ function normalizeAttendanceResult(row: RawRecord, fallbackEventId = "", fallbac
     rawStatus === "중복" ||
     message.includes("이미") ||
     message.toLowerCase().includes("already");
+  const normalizedBlockedStatus = rawStatus === "not_open" ? "notOpen" : rawStatus;
   const blockedStatus =
-    rawStatus === "notTarget" || rawStatus === "excluded" || rawStatus === "notFound"
-      ? (rawStatus as SubmitAttendanceResult["status"])
+    normalizedBlockedStatus === "notTarget" || normalizedBlockedStatus === "excluded" || normalizedBlockedStatus === "notFound" || normalizedBlockedStatus === "notOpen" || normalizedBlockedStatus === "closed"
+      ? (normalizedBlockedStatus as SubmitAttendanceResult["status"])
       : undefined;
   const status = blockedStatus ?? (already ? "already" : "completed");
 
@@ -896,10 +901,14 @@ function normalizeAttendanceResult(row: RawRecord, fallbackEventId = "", fallbac
     attendedAt: formatDisplayDate(asString(row.attendedAt ?? row["참석일시"])),
     completedCount: Number(row.completedCount ?? (status === "completed" ? 1 : 0)),
     skippedCount: Number(row.skippedCount ?? (status === "already" ? 1 : 0)),
-    blockedCount: Number(row.blockedCount ?? (status === "notTarget" || status === "excluded" || status === "notFound" ? 1 : 0)),
+    blockedCount: Number(row.blockedCount ?? (status === "notTarget" || status === "excluded" || status === "notFound" || status === "notOpen" || status === "closed" ? 1 : 0)),
     signatureId: asString(row.signatureId),
     signatureFileId: asString(row.signatureFileId),
     signatureImageUrl: asString(row.signatureImageUrl),
+    detail: asString(row.detail),
+    signatureOpenAt: asString(row.signatureOpenAt),
+    signatureCloseAt: asString(row.signatureCloseAt),
+    signatureWindowText: asString(row.signatureWindowText),
     message
   };
 }

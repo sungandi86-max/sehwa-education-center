@@ -414,7 +414,9 @@ function checkAttendanceEligibility(req) {
   const alreadyCount = results.filter((result) => result.status === "already_attended").length;
   const notTargetCount = results.filter((result) => result.status === "not_target").length;
   const excludedCount = results.filter((result) => result.status === "signature_excluded").length;
-  const blockedCount = notTargetCount + excludedCount;
+  const notOpenCount = results.filter((result) => result.status === "not_open").length;
+  const closedCount = results.filter((result) => result.status === "closed").length;
+  const blockedCount = notTargetCount + excludedCount + notOpenCount + closedCount;
   const status = canSignCount > 0
     ? "can_sign"
     : alreadyCount > 0 && alreadyCount === results.length
@@ -423,7 +425,11 @@ function checkAttendanceEligibility(req) {
         ? "signature_excluded"
         : notTargetCount > 0 && notTargetCount === results.length
           ? "not_target"
-          : "not_target";
+          : notOpenCount > 0 && notOpenCount === results.length
+            ? "not_open"
+            : closedCount > 0 && closedCount === results.length
+              ? "closed"
+              : "closed";
   const message = getEligibilityMessage(status, canSignCount, alreadyCount, blockedCount);
 
   return {
@@ -437,6 +443,8 @@ function checkAttendanceEligibility(req) {
       alreadyCount,
       notTargetCount,
       excludedCount,
+      notOpenCount,
+      closedCount,
       blockedCount,
       results
     }
@@ -479,6 +487,19 @@ function decisionToEligibilityResult(decision) {
     };
   }
 
+  if (decision.status === "notOpen" || decision.status === "closed") {
+    return Object.assign(
+      {},
+      result,
+      {
+        eventId: decision.eventId,
+        trainingTitle: title,
+        eligible: false,
+        status: decision.status === "notOpen" ? "not_open" : "closed"
+      }
+    );
+  }
+
   return {
     eventId: decision.eventId,
     trainingTitle: title,
@@ -498,6 +519,8 @@ function getEligibilityMessage(status, canSignCount, alreadyCount, blockedCount)
 
   if (status === "already_attended") return "이미 출석 처리되었습니다.";
   if (status === "signature_excluded") return "사전 서명 제외 대상입니다.";
+  if (status === "not_open") return "아직 서명할 수 없습니다.";
+  if (status === "closed") return "지금은 서명할 수 없습니다.";
   return "이 교육의 대상자가 아닙니다.";
 }
 
@@ -521,17 +544,25 @@ function submitQrAttendance(req) {
 
   const completedCount = results.filter((result) => result.status === "completed").length;
   const skippedCount = results.filter((result) => result.status === "already").length;
-  const blockedCount = results.filter((result) => result.status === "notTarget" || result.status === "excluded").length;
+  const blockedCount = results.filter((result) => result.status === "notTarget" || result.status === "excluded" || result.status === "notOpen" || result.status === "closed").length;
+  const notOpenCount = results.filter((result) => result.status === "notOpen").length;
+  const closedCount = results.filter((result) => result.status === "closed").length;
+  const ok = completedCount > 0 || skippedCount > 0;
+  const blockedMessage = notOpenCount > 0 && closedCount === 0
+    ? "아직 서명할 수 없습니다."
+    : "서명 가능 시간이 종료되어 출석을 저장하지 못했습니다.";
 
   if (mode === "group") {
     return {
-      success: true,
-      message: "출석 처리가 완료되었습니다.",
+      success: ok,
+      message: ok ? "출석 처리가 완료되었습니다." : blockedMessage,
       data: {
-        ok: true,
+        ok,
         completedCount,
         skippedCount,
         blockedCount,
+        notOpenCount,
+        closedCount,
         signatureId: signatureRecord.signatureId || "",
         signatureFileId: signatureRecord.signatureFileId || "",
         signatureImageUrl: signatureRecord.signatureImageUrl || "",
@@ -632,7 +663,88 @@ function getAttendanceDecision(eventId, staffId) {
     };
   }
 
+  const timeDecision = getSignatureTimeDecision(event);
+  if (timeDecision) {
+    timeDecision.result.eventId = eventId;
+    return {
+      eventId,
+      status: timeDecision.status,
+      result: timeDecision.result
+    };
+  }
+
   return { eventId, status: "ready" };
+}
+
+function getSignatureTimeDecision(event) {
+  const openAtValue = valueOf(event, ["signatureOpenAt", "서명시작일시", "서명 가능 시작", "서명가능시작일시", "서명시작"]);
+  const closeAtValue = valueOf(event, ["signatureCloseAt", "서명종료일시", "서명 가능 종료", "서명가능종료일시", "서명종료"]);
+  if (!openAtValue && !closeAtValue) return null;
+
+  const openAt = parseSignatureDate(openAtValue);
+  const closeAt = parseSignatureDate(closeAtValue);
+  const now = new Date();
+  const windowText = formatSignatureWindow(openAt, closeAt);
+
+  if (openAt && now.getTime() < openAt.getTime()) {
+    return {
+      status: "notOpen",
+      result: {
+        ok: false,
+        status: "notOpen",
+        message: "아직 서명할 수 없습니다.",
+        detail: "서명 가능 시간은 " + formatSignatureClock(openAt) + "부터입니다.",
+        signatureOpenAt: openAt.toISOString(),
+        signatureCloseAt: closeAt ? closeAt.toISOString() : "",
+        signatureWindowText: windowText
+      }
+    };
+  }
+
+  if (closeAt && now.getTime() > closeAt.getTime()) {
+    return {
+      status: "closed",
+      result: {
+        ok: false,
+        status: "closed",
+        message: "서명 가능 시간이 종료되어 출석을 저장하지 못했습니다.",
+        detail: "서명 가능 시간이 종료되었습니다. (" + formatSignatureClock(closeAt) + "까지)",
+        signatureOpenAt: openAt ? openAt.toISOString() : "",
+        signatureCloseAt: closeAt.toISOString(),
+        signatureWindowText: windowText
+      }
+    };
+  }
+
+  return null;
+}
+
+function parseSignatureDate(value) {
+  if (!value) return null;
+  if (Object.prototype.toString.call(value) === "[object Date]" && !isNaN(value.getTime())) return value;
+
+  const text = String(value || "").trim();
+  if (!text) return null;
+
+  const normalized = text
+    .replace(/\./g, "-")
+    .replace(/\//g, "-")
+    .replace(/\s+/, "T");
+  const parsed = new Date(normalized);
+  if (!isNaN(parsed.getTime())) return parsed;
+
+  return null;
+}
+
+function formatSignatureWindow(openAt, closeAt) {
+  if (openAt && closeAt) return formatSignatureClock(openAt) + " ~ " + formatSignatureClock(closeAt);
+  if (openAt) return formatSignatureClock(openAt) + "부터";
+  if (closeAt) return formatSignatureClock(closeAt) + "까지";
+  return "";
+}
+
+function formatSignatureClock(date) {
+  return Utilities.formatDate(date, Session.getScriptTimeZone(), "HH:mm");
 }
 
 function appendQrAttendance(req, eventId, staffId, signatureRecord) {
